@@ -21,7 +21,7 @@ What it is, how to install and use it: `README.md`. This file is what keeps a ch
 
 ## Code
 
-- SwiftUI instantiates the `App` struct more than once: the controller is a singleton, started on `didFinishLaunching`. Loading the engine before AppKit has finished launching stalls.
+- SwiftUI instantiates the `App` struct more than once: the controller is a singleton, started on `didFinishLaunching`.
 - Top-level `Task {}` in `main.swift` runs on the main actor; blocking main with a semaphore deadlocks it. Harness code uses `RunLoop.main.run()` or `Task.detached`.
 - Recording uses `AVCaptureSession` with an explicit `AVCaptureDeviceInput`; `AVAudioEngine` cannot bind a device reliably (Bluetooth headsets renegotiate their sample rate right after the mic opens). The converter is rebuilt when the buffer format changes.
 - The level meter in `DictationController` tracks a noise floor and a recent peak with tuned constants; recorded silence must give zero.

@@ -45,6 +45,7 @@ Measured on an M4 Pro, from key release to text at the cursor. Timings for your 
 | 3 s | 0.05 s | 0.3 s | 0.35 s |
 | 6 s | 0.07 s | 0.4 s | 0.5 s |
 | 10 s | 0.2 s | 0.7 s | 0.9 s |
+| 22 s | 0.1 s | 0.7 s | 0.85 s |
 
 Cleanup is nearly all of the wait. Turning it off in the menu leaves only the recognition column.
 
@@ -65,7 +66,7 @@ One download of the recognition models on first launch, no other network calls. 
 ## Troubleshooting
 
 - The pill says "Accessibility permission missing": grant it in System Settings. If it is already enabled there, the entry is stale: run `tccutil reset Accessibility nl.joris.localwhisper`, relaunch the app, grant it again. The transcript is still in Recent transcriptions.
-- Timings per dictation and engine output are in `~/Library/Logs/LocalWhisper.log`.
+- Timings per dictation are in `~/Library/Logs/LocalWhisper.log`.
 - If you rebuild often, run `./make-signing-cert.sh` once so permissions survive rebuilds.
 
 ## Development
