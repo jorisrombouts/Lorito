@@ -4,7 +4,7 @@ What it is, how to install and use it: `README.md`. This file is what keeps a ch
 
 ## Docs
 
-- After a change, check `README.md`, `PLAN.md` and this file; rewrite only a sentence the change made wrong. Replace and delete before adding; no history, no changelog, no rationale a user does not need. The README's size and speed figures are measurements (`wc -l Sources/LocalWhisper/*.swift`, `du -sh` on the installed binary, the log); a code change re-measures them.
+- After a change, check `README.md` and this file; rewrite only a sentence the change made wrong. Replace and delete before adding; no history, no changelog, no rationale a user does not need. The README's size and speed figures are measurements (`wc -l Sources/LocalWhisper/*.swift`, `du -sh` on the installed binary, the log); a code change re-measures them.
 
 ## Build and test
 

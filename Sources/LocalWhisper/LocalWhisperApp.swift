@@ -6,7 +6,7 @@ struct LocalWhisperApp: App {
     @AppStorage(Settings.inputDeviceKey) private var inputDevice = ""
 
     init() {
-        // Start after AppKit has finished launching; Metal init on a background thread before that stalls.
+        // Start after AppKit has finished launching.
         NotificationCenter.default.addObserver(forName: NSApplication.didFinishLaunchingNotification, object: nil, queue: .main) { _ in
             MainActor.assumeIsolated { DictationController.shared.start() }
         }
