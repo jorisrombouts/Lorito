@@ -1,5 +1,5 @@
 #!/bin/sh
-# Builds LocalWhisper.app with SwiftPM (no Xcode project needed). Output: build/LocalWhisper.app. The models download on first launch.
+# Builds LocalWhisper.app with SwiftPM (no Xcode project needed). Output: build/LocalWhisper.app
 # `./build-app.sh install` also copies it to /Applications and launches that copy.
 set -eu
 cd "$(dirname "$0")"
