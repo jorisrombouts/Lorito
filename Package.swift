@@ -10,8 +10,7 @@ let package = Package(
     targets: [
         .executableTarget(
             name: "LocalWhisper",
-            dependencies: [.product(name: "FluidAudio", package: "FluidAudio")],
-            path: "Sources/LocalWhisper"
+            dependencies: [.product(name: "FluidAudio", package: "FluidAudio")]
         ),
     ]
 )
