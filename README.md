@@ -30,7 +30,7 @@ Two ways, same result:
 - **Hold** Left Option, speak, release.
 - **Tap** Left Option, speak, tap again. Esc or the ✕ in the pill discards. It stops by itself after two minutes without speech.
 
-Any other key while holding cancels, so Option shortcuts like `€` or `@` still work. A pill at the bottom of the screen shows listening, transcribing, cleaning up, and inserted, or the reason a paste did not land. The language is detected automatically; Dutch, English and Swedish are verified.
+Any other key while holding cancels, so Option shortcuts like `€` or `@` still work. A pill at the bottom of the screen shows listening, transcribing, cleaning up, and inserted, or the reason a paste did not land. The language is detected automatically; Dutch and English are verified.
 
 The menu has a microphone picker ("Automatic" is the built-in microphone; Bluetooth headsets work when picked but miss the first half second), a cleanup toggle, Launch at Login, Recent transcriptions (the last five; clicking one copies it), and Quit.
 
