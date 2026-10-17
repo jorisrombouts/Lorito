@@ -18,7 +18,7 @@ final class AudioRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
 
     override init() {
         super.init()
-        output.setSampleBufferDelegate(self, queue: DispatchQueue(label: "LocalWhisper.audio"))
+        output.setSampleBufferDelegate(self, queue: DispatchQueue(label: "lorito.audio"))
         session.addOutput(output)
     }
 

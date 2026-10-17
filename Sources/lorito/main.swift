@@ -4,7 +4,7 @@ import AVFoundation
 let args = CommandLine.arguments
 func arg(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
 
-// Cleanup check: `LocalWhisper --clean "raw text"`
+// Cleanup check: `lorito --clean "raw text"`
 if let raw = arg(after: "--clean") {
     if let r = Cleaner.unavailableReason { print(r); exit(1) }
     let cleaner = Cleaner()
@@ -20,7 +20,7 @@ if let raw = arg(after: "--clean") {
     RunLoop.main.run()
 }
 
-// Engine check: `LocalWhisper --transcribe file.wav`
+// Engine check: `lorito --transcribe file.wav`
 if let path = arg(after: "--transcribe") {
     let samples = try loadSamples16k(URL(fileURLWithPath: path))
     print("audio_s", Double(samples.count) / 16_000)
@@ -44,26 +44,26 @@ func loadSamples16k(_ url: URL) throws -> [Float] {
     return AudioRecorder.resample(buf, with: AVAudioConverter(from: file.processingFormat, to: AudioRecorder.format)!)
 }
 
-// Insert self-test: `LocalWhisper --insert-test` pastes a fixed string into the frontmost app after 3 s.
+// Insert self-test: `lorito --insert-test` pastes a fixed string into the frontmost app after 3 s.
 if args.contains("--insert-test") {
     Task { @MainActor in
         try? await Task.sleep(for: .seconds(3))
-        print("insert:", TextInserter.insert("hello from LocalWhisper") ?? "posted")
+        print("insert:", TextInserter.insert("hello from lorito") ?? "posted")
         try? await Task.sleep(for: .seconds(1))
         exit(0)
     }
     RunLoop.main.run()
 }
 
-// `LocalWhisper --launch-at-login on|off` (run from the installed bundle) registers the app with launchd.
+// `lorito --launch-at-login on|off` (run from the installed bundle) registers the app with launchd.
 if let mode = arg(after: "--launch-at-login") {
     Settings.launchAtLogin = mode == "on"
     print("launch at login:", Settings.launchAtLogin ? "on" : "off", "(\(Bundle.main.bundlePath))")
     exit(0)
 }
 
-// Normal launch: the menu bar app. stderr (NSLog) goes to ~/Library/Logs/LocalWhisper.log.
-let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/LocalWhisper.log").path
+// Normal launch: the menu bar app. stderr (NSLog) goes to ~/Library/Logs/lorito.log.
+let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/lorito.log").path
 freopen(logPath, "a", stderr)
 NSApplication.shared.setActivationPolicy(.accessory)
-LocalWhisperApp.main()
+LoritoApp.main()

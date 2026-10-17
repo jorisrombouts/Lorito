@@ -1,22 +1,22 @@
-# LocalWhisper: rules for changing the code
+# lorito: rules for changing the code
 
 What it is, how to install and use it: `README.md`. This file is what keeps a change from breaking the app.
 
 ## Docs
 
-- After a change, check `README.md` and this file; rewrite only a sentence the change made wrong. Replace and delete before adding; no history, no changelog, no rationale a user does not need. The README's size and speed figures are measurements (`wc -l Sources/LocalWhisper/*.swift`, `du -sh` on the installed binary, the log); a code change re-measures them.
+- After a change, check `README.md` and this file; rewrite only a sentence the change made wrong. Replace and delete before adding; no history, no changelog, no rationale a user does not need. The README's size and speed figures are measurements (`wc -l Sources/lorito/*.swift`, `du -sh` on the installed binary, the log); a code change re-measures them.
 
 ## Build and test
 
-- `./build-app.sh` builds release, signs, and restarts `build/LocalWhisper.app`. `./build-app.sh install` refreshes `/Applications/LocalWhisper.app`, the login item. Never replace a bundle under a running app: macOS silently drops its permissions. Never run both copies at once.
-- Sign with the "LocalWhisper Dev" certificate (`make-signing-cert.sh`). An ad-hoc signature is a new identity per build, and every permission grant dies with it.
+- `./build-app.sh` builds release, signs, and restarts `build/lorito.app`. `./build-app.sh install` refreshes `/Applications/lorito.app`, the login item. Never replace a bundle under a running app: macOS silently drops its permissions. Never run both copies at once.
+- Sign with the "lorito Dev" certificate (`make-signing-cert.sh`). An ad-hoc signature is a new identity per build, and every permission grant dies with it.
 - `./check.sh` is the smoke test: engine on English, Dutch, noise, a hum it must hear no speech in and a spoken "thank you" it must keep; cleanup on Dutch and on a question it must not answer; overlay render. Run it before merging. The paste, hotkey and hands-free paths are checked by hand; `--insert-test` pastes into the frontmost app and the log's `mode=` field shows the gesture.
-- Log: `~/Library/Logs/LocalWhisper.log`. Baseline on an M4 Pro: engine load 0.1 to 0.2 s (12 s on the first launch of a new build while Core ML compiles the models, plus the download the first time ever), recognition 0.05 to 0.2 s per dictation, cleanup 0.3 s plus 25 ms per second of audio. Far above these is a regression.
+- Log: `~/Library/Logs/lorito.log`. Baseline on an M4 Pro: engine load 0.1 to 0.2 s (12 s on the first launch of a new build while Core ML compiles the models, plus the download the first time ever), recognition 0.05 to 0.2 s per dictation, cleanup 0.3 s plus 25 ms per second of audio. Far above these is a regression.
 - The models live in `~/Library/Application Support/FluidAudio`, downloaded by FluidAudio from Hugging Face on first launch; "engine failed" in the log with the menu showing the reason means that download did not land. FluidAudio's API is the source in `.build/checkouts/FluidAudio`; docs.fluidinference.com lags it by several versions.
 
 ## Permissions
 
-- A paste that does not land is Accessibility, not code: `TextInserter.insert` returns the reason and the pill shows it instead of "Inserted". `ax_trusted=0` in the log with the app enabled in System Settings means a stale entry: `tccutil reset Accessibility nl.joris.localwhisper`, relaunch, grant again. A binary started from a shell inherits the terminal's grants; only `open` tests the app's own.
+- A paste that does not land is Accessibility, not code: `TextInserter.insert` returns the reason and the pill shows it instead of "Inserted". `ax_trusted=0` in the log with the app enabled in System Settings means a stale entry: `tccutil reset Accessibility nl.joris.lorito`, relaunch, grant again. A binary started from a shell inherits the terminal's grants; only `open` tests the app's own.
 - The agent sandbox cannot read `log show` or take screenshots. Use the log file and `--overlay-demo`.
 
 ## Code

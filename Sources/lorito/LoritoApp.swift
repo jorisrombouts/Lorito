@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct LocalWhisperApp: App {
+struct LoritoApp: App {
     private let controller = DictationController.shared
     @AppStorage(Settings.cleanupEnabledKey) private var cleanupEnabled = true
     @AppStorage(Settings.inputDeviceKey) private var inputDevice = ""
@@ -42,7 +42,7 @@ struct LocalWhisperApp: App {
                 }
                 Divider()
             }
-            Button("Quit LocalWhisper") { exit(0) }
+            Button("Quit lorito") { exit(0) }
                 .keyboardShortcut("q")
         } label: {
             menuIcon

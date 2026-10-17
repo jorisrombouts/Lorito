@@ -1,4 +1,4 @@
-# LocalWhisper
+# lorito
 
 Hold Left Option and speak, or tap it and speak hands-free. The text appears at your cursor, in any app.
 
@@ -16,7 +16,7 @@ Everything runs on your Mac. Nothing leaves it.
 ## Install
 
 ```sh
-git clone https://github.com/jorisrombouts/LocalWhisper.git && cd LocalWhisper
+git clone https://github.com/jorisrombouts/lorito.git && cd lorito
 ./build-app.sh install
 ```
 
@@ -65,10 +65,10 @@ One download of the recognition models on first launch, no other network calls. 
 
 ## Troubleshooting
 
-- The pill says "Accessibility permission missing": grant it in System Settings. If it is already enabled there, the entry is stale: run `tccutil reset Accessibility nl.joris.localwhisper`, relaunch the app, grant it again. The transcript is still in Recent transcriptions.
-- Timings per dictation are in `~/Library/Logs/LocalWhisper.log`.
+- The pill says "Accessibility permission missing": grant it in System Settings. If it is already enabled there, the entry is stale: run `tccutil reset Accessibility nl.joris.lorito`, relaunch the app, grant it again. The transcript is still in Recent transcriptions.
+- Timings per dictation are in `~/Library/Logs/lorito.log`.
 - If you rebuild often, run `./make-signing-cert.sh` once so permissions survive rebuilds.
 
 ## Development
 
-A Swift Package with no Xcode project; FluidAudio is its one dependency. `./build-app.sh` builds and runs `build/LocalWhisper.app`. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.
+A Swift Package with no Xcode project; FluidAudio is its one dependency. `./build-app.sh` builds and runs `build/lorito.app`. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.
