@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 T=$(mktemp -d)
 swift build --quiet
 BIN=.build/debug/LocalWhisper
+export DYLD_FRAMEWORK_PATH="$PWD/Frameworks/whisper.xcframework/macos-arm64_x86_64"   # the debug binary has no rpath
 
 say -v Samantha -o "$T/en.aiff" "Hello, this is a test of local whisper."
 say -v Xander -o "$T/nl.aiff" "Hallo, dit is een test van lokale spraakherkenning."
