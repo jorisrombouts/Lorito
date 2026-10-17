@@ -33,14 +33,6 @@ final class DictationController {
     private var started = false
     @ObservationIgnored private lazy var overlay = RecordingOverlay(controller: self)
 
-    static func modelURL(_ name: String = "ggml-large-v3-turbo") -> URL? {
-        if let u = Bundle.main.url(forResource: name, withExtension: "bin") { return u }
-        let dev = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
-            .appendingPathComponent("Resources/\(name).bin")
-        return FileManager.default.fileExists(atPath: dev.path) ? dev : nil
-    }
-
     func start() {
         guard !started else { return }
         started = true
@@ -123,7 +115,7 @@ final class DictationController {
             let t0 = Date()
             let audioSeconds = Double(samples.count) / AudioRecorder.format.sampleRate
             var text = await engine.transcribe(samples)
-            let whisperMs = ms(since: t0)
+            let sttMs = ms(since: t0)
             guard !text.isEmpty else { finish(); return }
 
             var cleanMs = 0
@@ -138,8 +130,8 @@ final class DictationController {
             let t2 = Date()
             let notInserted = TextInserter.insert(text)
             transcripts = Array(([text] + transcripts).prefix(5))
-            NSLog("dictation mode=%@ audio_s=%.1f whisper_ms=%d clean_ms=%d insert_ms=%d fallback=%d",
-                  mode, audioSeconds, whisperMs, cleanMs, ms(since: t2), fellBack ? 1 : 0)
+            NSLog("dictation mode=%@ audio_s=%.1f stt_ms=%d clean_ms=%d insert_ms=%d fallback=%d",
+                  mode, audioSeconds, sttMs, cleanMs, ms(since: t2), fellBack ? 1 : 0)
             // A failed paste is the one the user must act on, so it outranks a cleanup fallback and holds longer.
             let (next, hold): (State, Int) =
                 if let notInserted { (.fallback(notInserted), 2500) }
@@ -180,7 +172,7 @@ final class DictationController {
                 try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("overlay-\(name).png"))
             }
         }
-        _exit(0)
+        exit(0)
     }
 
     private func ms(since d: Date) -> Int { Int(Date().timeIntervalSince(d) * 1000) }

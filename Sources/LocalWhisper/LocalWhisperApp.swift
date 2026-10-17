@@ -42,7 +42,7 @@ struct LocalWhisperApp: App {
                 }
                 Divider()
             }
-            Button("Quit LocalWhisper") { _exit(0) } // plain exit() trips a ggml-metal atexit assert in v1.9.2
+            Button("Quit LocalWhisper") { exit(0) }
                 .keyboardShortcut("q")
         } label: {
             menuIcon

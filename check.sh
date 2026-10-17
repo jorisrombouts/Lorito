@@ -5,7 +5,6 @@ cd "$(dirname "$0")"
 T=$(mktemp -d)
 swift build --quiet
 BIN=.build/debug/LocalWhisper
-export DYLD_FRAMEWORK_PATH="$PWD/Frameworks/whisper.xcframework/macos-arm64_x86_64"   # the debug binary has no rpath
 
 say -v Samantha -o "$T/en.aiff" "Hello, this is a test of local whisper."
 say -v Xander -o "$T/nl.aiff" "Hallo, dit is een test van lokale spraakherkenning."
@@ -19,10 +18,10 @@ python3 -c "import wave,random,struct,math; random.seed(1); w=wave.open('$T/hum.
 "$BIN" --transcribe "$T/en.wav" 2>/dev/null | grep -i "test of local whisper" || { echo "FAIL: english transcription"; exit 1; }
 "$BIN" --transcribe "$T/nl.wav" 2>/dev/null | grep -i "spraakherkenning" || { echo "FAIL: dutch transcription"; exit 1; }
 [ "$("$BIN" --transcribe "$T/noise.wav" 2>/dev/null | grep "^text:")" = "text: " ] || { echo "FAIL: faint noise should transcribe to nothing"; exit 1; }
-[ "$("$BIN" --transcribe "$T/hum.wav" 2>/dev/null | grep "^text:")" = "text: " ] || { echo "FAIL: VAD should hear no speech in a short hum"; exit 1; }
+[ "$("$BIN" --transcribe "$T/hum.wav" 2>/dev/null | grep "^text:")" = "text: " ] || { echo "FAIL: engine should hear no speech in a short hum"; exit 1; }
 "$BIN" --transcribe "$T/ty.wav" 2>/dev/null | grep -i "thank you" || { echo "FAIL: a spoken 'thank you' must survive; only non-speech is dropped"; exit 1; }
 
-# Whisper hands over punctuated, capitalised text. Lowercase input hides the case that actually breaks.
+# The engine hands over punctuated, capitalised text. Lowercase input hides the case that actually breaks.
 OUT=$("$BIN" --clean "Ik wil, eh, morgen naar de winkel gaan." 2>/dev/null | grep "^text:")
 echo "$OUT" | grep -q "winkel" && ! echo "$OUT" | grep -qiE ", eh,|edited:|transcript:" || { echo "FAIL: cleanup: $OUT"; exit 1; }
 

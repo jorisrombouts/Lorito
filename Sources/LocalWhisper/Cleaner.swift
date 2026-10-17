@@ -15,7 +15,7 @@ final class Cleaner {
     - Apply a self-correction marked by "no wait", "I mean", "nee wacht" or "of eigenlijk": keep the correction, drop what it replaced. Leave an unmarked restart alone.
     """
 
-    /// Written the way whisper hands text over, punctuated and capitalised. Lowercase examples teach the
+    /// Written the way the engine hands text over, punctuated and capitalised. Lowercase examples teach the
     /// model that tidy-looking input needs no edit, and it returns a filler-ridden sentence unchanged.
     static let examples = [
         ("So I think we should, uh, go to the store tomorrow and buy some, eh, apples.",

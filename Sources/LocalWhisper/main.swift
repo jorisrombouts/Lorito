@@ -26,13 +26,13 @@ if let path = arg(after: "--transcribe") {
     print("audio_s", Double(samples.count) / 16_000)
     Task {
         let t0 = Date()
-        guard let engine = try? await ParakeetEngine() else { print("engine failed"); _exit(1) }
+        guard let engine = try? await ParakeetEngine() else { print("engine failed"); exit(1) }
         print("load_ms", Int(Date().timeIntervalSince(t0) * 1000))
         let t1 = Date()
         let text = await engine.transcribe(samples)
-        print("whisper_ms", Int(Date().timeIntervalSince(t1) * 1000))
+        print("stt_ms", Int(Date().timeIntervalSince(t1) * 1000))
         print("text:", text)
-        fflush(stdout); _exit(0) // ggml-metal v1.9.2 asserts in its atexit teardown
+        exit(0)
     }
     RunLoop.main.run()
 }
@@ -62,7 +62,7 @@ if let mode = arg(after: "--launch-at-login") {
     exit(0)
 }
 
-// Normal launch: the menu bar app. stderr (whisper + NSLog) goes to ~/Library/Logs/LocalWhisper.log.
+// Normal launch: the menu bar app. stderr (NSLog) goes to ~/Library/Logs/LocalWhisper.log.
 let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/LocalWhisper.log").path
 freopen(logPath, "a", stderr)
 NSApplication.shared.setActivationPolicy(.accessory)

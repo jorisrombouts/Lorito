@@ -1,7 +1,4 @@
 .build/
 build/
 *.app
-Resources/*.bin
-Resources/*.mlmodelc/
-Frameworks/
 .DS_Store
