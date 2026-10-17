@@ -1,5 +1,5 @@
 #!/bin/sh
-# Downloads the whisper model and the prebuilt whisper.cpp framework. Both are gitignored. Safe to re-run.
+# Downloads the whisper model, the VAD model, the Core ML encoder and the prebuilt whisper.cpp framework. All gitignored. Safe to re-run.
 set -eu
 cd "$(dirname "$0")"
 WHISPER=v1.9.2
@@ -22,6 +22,20 @@ if [ ! -f "$VAD" ]; then
 fi
 if [ "$(stat -f %z "$VAD")" -lt 500000 ]; then
   rm -f "$VAD"; echo "VAD download failed: huggingface.co unreachable or blocked"; exit 1
+fi
+
+# Core ML encoder: whisper runs the encoder on the Neural Engine when this sits next to the ggml model.
+COREML=Resources/ggml-large-v3-turbo-encoder.mlmodelc
+if [ ! -d "$COREML" ]; then
+  echo "downloading Core ML encoder (1.2 GB)"
+  TMP=$(mktemp -d)
+  curl -L --progress-bar -o "$TMP/enc.zip" "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$(basename "$COREML").zip"
+  if [ "$(stat -f %z "$TMP/enc.zip")" -lt 1000000000 ]; then
+    rm -rf "$TMP"; echo "Core ML encoder download failed: huggingface.co unreachable or blocked"; exit 1
+  fi
+  unzip -q "$TMP/enc.zip" -d "$TMP"
+  mv "$TMP/$(basename "$COREML")" "$COREML"
+  rm -rf "$TMP"
 fi
 
 if [ ! -d Frameworks/whisper.xcframework ]; then

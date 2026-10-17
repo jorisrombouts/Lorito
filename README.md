@@ -20,7 +20,7 @@ git clone https://github.com/jorisrombouts/LocalWhisper.git && cd LocalWhisper
 ./build-app.sh install
 ```
 
-The first build downloads the models, 1.6 GB in all. The app is installed in `/Applications` and appears in the menu bar as a waveform.
+The first build downloads the models, 2.8 GB in all. The first launch compiles the Core ML encoder for the Neural Engine, about 30 s, during which the menu bar icon is there but dictation is not. The app is installed in `/Applications` and appears in the menu bar as a waveform.
 macOS asks for two permissions on first use: Microphone, and Accessibility, which is what lets the app paste at your cursor.
 
 ## Use
@@ -47,13 +47,14 @@ Measured on an M4 Pro, from key release to text at the cursor. Timings for your 
 | 20 s | 1.1 s | 1.4 s | 2.5 s |
 | 45 s | 1.7 s | 2.5 s | 4.2 s |
 
-Recognition is flat up to 30 s of audio. Turning cleanup off in the menu leaves only the recognition column.
+Recognition is flat up to 30 s of audio. Turning cleanup off in the menu leaves only the recognition column. The encoder runs on the Neural Engine through Core ML; on the M4 Pro that measures the same as Metal, other chips are not measured. Without the encoder directory whisper falls back to Metal.
 
 ## Size
 
 | Component | Size |
 |---|---|
 | Model (ggml-large-v3-turbo) | 1.5 GB |
+| Core ML encoder (ggml-large-v3-turbo-encoder.mlmodelc) | 1.2 GB |
 | whisper.cpp framework | 5.9 MB |
 | App icon | 1.2 MB |
 | Silero VAD model | 868 KB |
@@ -73,8 +74,4 @@ No network calls. The models and Apple Intelligence run on-device. Your clipboar
 
 ## Development
 
-A Swift Package with no Xcode project. `./build-app.sh` builds and runs `build/LocalWhisper.app`; `./fetch-deps.sh` gets the models and the whisper.cpp framework. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.
-
-## Roadmap
-
-- Core ML encoder: recognition about twice as fast, for 1.3 GB more disk space.
+A Swift Package with no Xcode project. `./build-app.sh` builds and runs `build/LocalWhisper.app`; `./fetch-deps.sh` gets the models, the Core ML encoder and the whisper.cpp framework. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.

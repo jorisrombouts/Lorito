@@ -11,8 +11,8 @@ What it is, how to install and use it: `README.md`. This file is what keeps a ch
 - `./build-app.sh` fetches deps, builds release, signs, and restarts `build/LocalWhisper.app`. `./build-app.sh install` refreshes `/Applications/LocalWhisper.app`, the login item. Never replace a bundle under a running app: macOS silently drops its permissions. Never run both copies at once.
 - Sign with the "LocalWhisper Dev" certificate (`make-signing-cert.sh`). An ad-hoc signature is a new identity per build, and every permission grant dies with it.
 - `./check.sh` is the smoke test: engine on English, Dutch, noise, a hum VAD must reject and a spoken "thank you" it must keep; cleanup on Dutch and on a question it must not answer; overlay render. Run it before merging. The paste, hotkey and hands-free paths are checked by hand; `--insert-test` pastes into the frontmost app and the log's `mode=` field shows the gesture.
-- Log: `~/Library/Logs/LocalWhisper.log`. Baseline on an M4 Pro: engine load 0.5 s (0.7 s on a cold file cache), whisper 0.9 s per dictation (1.6 s beyond 30 s of audio), cleanup 0.5 s plus 30 ms per second of audio. Far above these is a regression.
-- The two models and the framework are gitignored; `fetch-deps.sh` gets them. A model file of a few KB is a proxy block page, which is what the size guards catch.
+- Log: `~/Library/Logs/LocalWhisper.log`. Baseline on an M4 Pro: engine load 0.5 s (0.7 s on a cold file cache, 30 s on the first launch of a new build while Core ML compiles the encoder), whisper 0.9 s per dictation (1.6 s beyond 30 s of audio), cleanup 0.5 s plus 30 ms per second of audio. Far above these is a regression.
+- The two models, the Core ML encoder and the framework are gitignored; `fetch-deps.sh` gets them. A model file of a few KB is a proxy block page, which is what the size guards catch.
 
 ## Permissions
 
@@ -23,7 +23,7 @@ What it is, how to install and use it: `README.md`. This file is what keeps a ch
 
 - SwiftUI instantiates the `App` struct more than once: the controller is a singleton, started on `didFinishLaunching`. Loading whisper (Metal) before AppKit has finished launching stalls.
 - Top-level `Task {}` in `main.swift` runs on the main actor; blocking main with a semaphore deadlocks it. Harness code uses `RunLoop.main.run()` or `Task.detached`.
-- whisper.cpp v1.9.2 asserts in a ggml-metal `atexit` handler; the app quits with `_exit`. Its "failed to load Core ML model" line is the expected Metal fallback.
+- whisper.cpp v1.9.2 asserts in a ggml-metal `atexit` handler; the app quits with `_exit`. Its "failed to load Core ML model" line means the encoder directory is missing next to the model and whisper fell back to Metal; "Core ML model loaded" is the expected line. Auto-detect runs the encoder twice per dictation, once to detect the language, on Metal and Core ML alike.
 - Recording uses `AVCaptureSession` with an explicit `AVCaptureDeviceInput`; `AVAudioEngine` cannot bind a device reliably (Bluetooth headsets renegotiate their sample rate right after the mic opens). The converter is rebuilt when the buffer format changes.
 - The level meter in `DictationController` tracks a noise floor and a recent peak with tuned constants; recorded silence must give zero.
 - Whisper invents speech in non-speech audio, and its own `no_speech_prob` reads 0.00 while doing it. Silero VAD gates the decoder: only audio it hears speech in is transcribed, so hum, noise and clicks come back empty in a few ms. Neither loudness, duration nor decoder confidence separates an invented sentence from a real one, so do not add a threshold or a phrase deny list in front of it. VAD is the only guard left: without the model the app logs a warning and hallucinates again. `whisper peak=` stays in the log to tell a dead microphone from one VAD heard no speech on.
