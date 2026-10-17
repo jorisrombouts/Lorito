@@ -29,7 +29,7 @@ final class DictationController {
     private let recorder = AudioRecorder()
     private let hotkey = HotkeyMonitor()
     private let cleaner = Cleaner()
-    private var engine: WhisperEngine?
+    private var engine: ParakeetEngine?
     private var started = false
     @ObservationIgnored private lazy var overlay = RecordingOverlay(controller: self)
 
@@ -64,12 +64,10 @@ final class DictationController {
         hotkey.start()
         refreshPermissions(prompt: true)
 
-        guard let url = Self.modelURL() else { engineProblem = "Model file ggml-large-v3-turbo.bin not found"; refreshPermissions(prompt: false); return }
-        let vad = Self.modelURL(WhisperEngine.vadModel)?.path
         Task.detached { [self] in
             let t0 = Date()
             do {
-                let e = try WhisperEngine(modelPath: url.path, vadPath: vad)
+                let e = try await ParakeetEngine()
                 await MainActor.run { engine = e }
                 NSLog("engine ready in %d ms", Int(Date().timeIntervalSince(t0) * 1000))
             } catch {

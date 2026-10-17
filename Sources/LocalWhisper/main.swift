@@ -22,13 +22,12 @@ if let raw = arg(after: "--clean") {
 
 // Engine check: `LocalWhisper --transcribe file.wav`
 if let path = arg(after: "--transcribe") {
-    let t0 = Date()
-    let engine = try WhisperEngine(modelPath: DictationController.modelURL()!.path,
-                                   vadPath: DictationController.modelURL(WhisperEngine.vadModel)?.path)
-    print("load_ms", Int(Date().timeIntervalSince(t0) * 1000))
     let samples = try loadSamples16k(URL(fileURLWithPath: path))
     print("audio_s", Double(samples.count) / 16_000)
     Task {
+        let t0 = Date()
+        guard let engine = try? await ParakeetEngine() else { print("engine failed"); _exit(1) }
+        print("load_ms", Int(Date().timeIntervalSince(t0) * 1000))
         let t1 = Date()
         let text = await engine.transcribe(samples)
         print("whisper_ms", Int(Date().timeIntervalSince(t1) * 1000))
