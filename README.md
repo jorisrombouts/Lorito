@@ -2,7 +2,7 @@
 
 Hold Left Option and speak, or tap it and speak hands-free. The text appears at your cursor, in any app.
 
-- Recognition: [whisper.cpp](https://github.com/ggml-org/whisper.cpp) (MIT) with the large-v3-turbo model, gated by Silero voice activity detection so silence is never transcribed.
+- Recognition: NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. 25 European languages, detected automatically; silence and noise come back empty.
 - Cleanup: Apple's on-device Foundation Models, the Apple Intelligence system model of about 3B parameters, not bundled.
 
 Everything runs on your Mac. Nothing leaves it.
@@ -20,7 +20,7 @@ git clone https://github.com/jorisrombouts/LocalWhisper.git && cd LocalWhisper
 ./build-app.sh install
 ```
 
-The first build downloads the models, 2.8 GB in all. The first launch compiles the Core ML encoder for the Neural Engine, about 30 s, during which the menu bar icon is there but dictation is not. The app is installed in `/Applications` and appears in the menu bar as a waveform.
+The first launch downloads the recognition models, 461 MB, into `~/Library/Application Support/FluidAudio` and compiles them for the Neural Engine, about 12 s in all, during which the menu bar icon is there but dictation is not. Later launches load them in under a second. The app is installed in `/Applications` and appears in the menu bar as a waveform.
 macOS asks for two permissions on first use: Microphone, and Accessibility, which is what lets the app paste at your cursor.
 
 ## Use
@@ -42,29 +42,25 @@ Measured on an M4 Pro, from key release to text at the cursor. Timings for your 
 
 | Dictation | Recognition | Cleanup | Total |
 |---|---|---|---|
-| 3 s | 0.9 s | 0.6 s | 1.5 s |
-| 10 s | 1.0 s | 1.1 s | 2.1 s |
-| 20 s | 1.1 s | 1.4 s | 2.5 s |
-| 45 s | 1.7 s | 2.5 s | 4.2 s |
+| 3 s | 0.05 s | 0.3 s | 0.35 s |
+| 6 s | 0.07 s | 0.4 s | 0.5 s |
+| 10 s | 0.2 s | 0.7 s | 0.9 s |
 
-Recognition is flat up to 30 s of audio. Turning cleanup off in the menu leaves only the recognition column. The encoder runs on the Neural Engine through Core ML; on the M4 Pro that measures the same as Metal, other chips are not measured. Without the encoder directory whisper falls back to Metal.
+Cleanup is nearly all of the wait. Turning it off in the menu leaves only the recognition column.
 
 ## Size
 
 | Component | Size |
 |---|---|
-| Model (ggml-large-v3-turbo) | 1.5 GB |
-| Core ML encoder (ggml-large-v3-turbo-encoder.mlmodelc) | 1.2 GB |
-| whisper.cpp framework | 5.9 MB |
+| Recognition models, in Application Support | 461 MB |
+| App binary, FluidAudio linked in | 18 MB |
 | App icon | 1.2 MB |
-| Silero VAD model | 868 KB |
-| App binary | 444 KB |
 
-The Swift source is about 785 lines in 10 files.
+The Swift source is about 733 lines in 10 files.
 
 ## Privacy
 
-No network calls. The models and Apple Intelligence run on-device. Your clipboard is restored after the paste.
+One download of the recognition models on first launch, no other network calls. The models and Apple Intelligence run on-device. Your clipboard is restored after the paste.
 
 ## Troubleshooting
 
@@ -74,4 +70,4 @@ No network calls. The models and Apple Intelligence run on-device. Your clipboar
 
 ## Development
 
-A Swift Package with no Xcode project. `./build-app.sh` builds and runs `build/LocalWhisper.app`; `./fetch-deps.sh` gets the models, the Core ML encoder and the whisper.cpp framework. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.
+A Swift Package with no Xcode project; FluidAudio is its one dependency. `./build-app.sh` builds and runs `build/LocalWhisper.app`. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.
