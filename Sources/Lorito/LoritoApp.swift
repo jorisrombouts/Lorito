@@ -62,8 +62,8 @@ struct LoritoApp: App {
 
     @ViewBuilder private var menuIcon: some View {
         switch controller.state {
-        case .listening: Image(systemName: "waveform.badge.mic")
-        case .transcribing, .cleaning: Image(systemName: "waveform").symbolEffect(.variableColor)
+        case .listening: Image(nsImage: Self.parrotListening)
+        case .transcribing, .cleaning: Image(nsImage: Self.parrotWorking)
         default: Image(nsImage: Self.parrot)
         }
     }
@@ -71,7 +71,11 @@ struct LoritoApp: App {
     // The app icon as a menu bar template: the paths and bar sampling of make-icon.swift, run at the icon's own 680 pt
     // (SwiftUI `Path.contains` flattens curves with an absolute tolerance, so it is scale-dependent) and scaled down, so
     // the bars match the shipped icns exactly (ten show, the eleventh is under the beak). Eye cut out.
-    private static let parrot: NSImage = {
+    // Listening adds a recording dot in the free bottom-right corner; working draws the parrot at half strength.
+    private static let parrot = parrot()
+    private static let parrotListening = parrot(dot: true)
+    private static let parrotWorking = parrot(alpha: 0.45)
+    private static func parrot(dot: Bool = false, alpha: CGFloat = 1) -> NSImage {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
             let s: CGFloat = 680, k = rect.width / s
             func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * s, y: y * s) }
@@ -81,6 +85,8 @@ struct LoritoApp: App {
             var beak = Path()
             beak.move(to: p(0.62, 0.30)); beak.addQuadCurve(to: p(0.98, 0.46), control: p(0.92, 0.26)); beak.addQuadCurve(to: p(0.86, 0.70), control: p(1.00, 0.62)); beak.addQuadCurve(to: p(0.72, 0.56), control: p(0.82, 0.58)); beak.addQuadCurve(to: p(0.62, 0.30), control: p(0.66, 0.44)); beak.closeSubpath()
             beak.move(to: p(0.70, 0.58)); beak.addQuadCurve(to: p(0.86, 0.72), control: p(0.82, 0.60)); beak.addQuadCurve(to: p(0.68, 0.72), control: p(0.78, 0.78)); beak.closeSubpath()
+            let ctx = NSGraphicsContext.current!.cgContext
+            ctx.setAlpha(alpha); ctx.beginTransparencyLayer(auxiliaryInfo: nil)   // dim the glyph as one layer
             NSColor.black.setFill()
             let bars = 11, pitch = 0.72 * s / 11, w = pitch * 0.58
             for i in 0..<bars {   // one rounded bar per column, its ends on the silhouette
@@ -92,13 +98,16 @@ struct LoritoApp: App {
                 NSBezierPath(roundedRect: NSRect(x: (x - w / 2) * k, y: t * k, width: w * k, height: max(bottom - t, w) * k), xRadius: w * k / 2, yRadius: w * k / 2).fill()
             }
             NSBezierPath(cgPath: beak.applying(CGAffineTransform(scaleX: k, y: k)).cgPath).fill()
-            NSGraphicsContext.current?.cgContext.setBlendMode(.clear)
+            ctx.setBlendMode(.clear)
             NSBezierPath(ovalIn: NSRect(x: 0.47 * s * k, y: 0.37 * s * k, width: 0.12 * s * k, height: 0.12 * s * k)).fill()
+            ctx.setBlendMode(.normal)
+            if dot { NSBezierPath(ovalIn: NSRect(x: 0.80 * s * k, y: 0.80 * s * k, width: 0.20 * s * k, height: 0.20 * s * k)).fill() }
+            ctx.endTransparencyLayer()
             return true
         }
         image.isTemplate = true
         return image
-    }()
+    }
 
     private func openSettings(for problem: String) {
         let pane = problem.hasPrefix("Microphone")
