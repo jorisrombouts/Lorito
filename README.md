@@ -1,3 +1,5 @@
+<p align="center"><img src="Resources/AppIcon.png" width="160" alt="Lorito icon"></p>
+
 # Lorito
 
 Hold Left Option and speak, or tap it and speak hands-free. The text appears at your cursor, in any app.
@@ -60,7 +62,7 @@ Cleanup is nearly all of the wait. Turning it off in the menu leaves only the re
 |---|---|
 | Recognition models, in Application Support | 461 MB |
 | App binary, FluidAudio linked in | 18 MB |
-| App icon | 1.2 MB |
+| App icon | 648 KB |
 
 The Swift source is about 726 lines in 10 files.
 
