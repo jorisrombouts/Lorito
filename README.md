@@ -25,7 +25,7 @@ git clone https://github.com/jorisrombouts/Lorito.git && cd Lorito
 
 The certificate gives the app a fixed identity, so the permissions below survive updates. Updating is `git pull && ./build-app.sh install`.
 
-The first launch downloads the recognition models, 461 MB, into `~/Library/Application Support/FluidAudio` and compiles them for the Neural Engine, about 12 s in all, during which the menu bar icon is there but dictation is not. Later launches load them in under a second. The app is installed in `/Applications` and appears in the menu bar as a waveform.
+The first launch downloads the recognition models, 461 MB, into `~/Library/Application Support/FluidAudio` and compiles them for the Neural Engine, about 12 s in all, during which the menu bar icon is there but dictation is not. Later launches load them in under a second. The app is installed in `/Applications` and appears in the menu bar as a parrot, which turns into a waveform while it works.
 macOS asks for two permissions on first use: Microphone, and Accessibility, which is what lets the app paste at your cursor.
 
 Upgrading from an install named `lorito`, lowercase: quit it, run `tccutil reset All nl.joris.lorito`, delete `/Applications/lorito.app`, then install as above and grant the two permissions again. The certificate is now called "Lorito Dev"; the old "lorito Dev" can be deleted in Keychain Access.
@@ -64,7 +64,7 @@ Cleanup is nearly all of the wait. Turning it off in the menu leaves only the re
 | App binary, FluidAudio linked in | 18 MB |
 | App icon | 648 KB |
 
-The Swift source is about 726 lines in 10 files.
+The Swift source is about 752 lines in 10 files.
 
 ## Privacy
 
