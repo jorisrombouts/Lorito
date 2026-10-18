@@ -68,26 +68,32 @@ struct LoritoApp: App {
         }
     }
 
-    // The app icon's parrot as a menu bar template: head, neck and hooked beak in one silhouette, the eye cut out.
+    // The app icon as a menu bar template: the paths and bar sampling of make-icon.swift, run at the icon's own 680 pt
+    // (SwiftUI `Path.contains` flattens curves with an absolute tolerance, so it is scale-dependent) and scaled down, so
+    // the bars match the shipped icns exactly (ten show, the eleventh is under the beak). Eye cut out.
     private static let parrot: NSImage = {
         let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
-            let s = rect.width
-            func p(_ x: CGFloat, _ y: CGFloat) -> NSPoint { NSPoint(x: x * s, y: y * s) }
+            let s: CGFloat = 680, k = rect.width / s
+            func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * s, y: y * s) }
+            var body = Path()
+            body.addEllipse(in: CGRect(x: 0.10 * s, y: 0.15 * s, width: 0.66 * s, height: 0.66 * s))
+            body.move(to: p(0.14, 0.60)); body.addQuadCurve(to: p(0.08, 0.96), control: p(0.02, 0.80)); body.addLine(to: p(0.72, 0.96)); body.addQuadCurve(to: p(0.70, 0.62), control: p(0.78, 0.82)); body.closeSubpath()
+            var beak = Path()
+            beak.move(to: p(0.62, 0.30)); beak.addQuadCurve(to: p(0.98, 0.46), control: p(0.92, 0.26)); beak.addQuadCurve(to: p(0.86, 0.70), control: p(1.00, 0.62)); beak.addQuadCurve(to: p(0.72, 0.56), control: p(0.82, 0.58)); beak.addQuadCurve(to: p(0.62, 0.30), control: p(0.66, 0.44)); beak.closeSubpath()
+            beak.move(to: p(0.70, 0.58)); beak.addQuadCurve(to: p(0.86, 0.72), control: p(0.82, 0.60)); beak.addQuadCurve(to: p(0.68, 0.72), control: p(0.78, 0.78)); beak.closeSubpath()
             NSColor.black.setFill()
-            NSBezierPath(ovalIn: NSRect(x: 0.10 * s, y: 0.15 * s, width: 0.66 * s, height: 0.66 * s)).fill()
-            let path = NSBezierPath()   // one shape at a time: overlapping subpaths would cancel out
-            func quad(_ x: CGFloat, _ y: CGFloat, via cx: CGFloat, _ cy: CGFloat) {   // same curves as make-icon.swift
-                let a = path.currentPoint, b = p(x, y), c = p(cx, cy)
-                path.curve(to: b, controlPoint1: NSPoint(x: a.x + 2 / 3 * (c.x - a.x), y: a.y + 2 / 3 * (c.y - a.y)),
-                           controlPoint2: NSPoint(x: b.x + 2 / 3 * (c.x - b.x), y: b.y + 2 / 3 * (c.y - b.y)))
+            let bars = 11, pitch = 0.72 * s / 11, w = pitch * 0.58
+            for i in 0..<bars {   // one rounded bar per column, its ends on the silhouette
+                let x = 0.06 * s + pitch * (CGFloat(i) + 0.5)
+                var top: CGFloat? = nil, bottom: CGFloat = 0
+                var y: CGFloat = 0
+                while y <= s { if body.contains(CGPoint(x: x, y: y)) { if top == nil { top = y }; bottom = y }; y += 2 }
+                guard let t = top else { continue }
+                NSBezierPath(roundedRect: NSRect(x: (x - w / 2) * k, y: t * k, width: w * k, height: max(bottom - t, w) * k), xRadius: w * k / 2, yRadius: w * k / 2).fill()
             }
-            path.move(to: p(0.14, 0.60)); quad(0.08, 0.96, via: 0.02, 0.80); path.line(to: p(0.72, 0.96)); quad(0.70, 0.62, via: 0.78, 0.82); path.close(); path.fill()
-            path.removeAllPoints()
-            path.move(to: p(0.62, 0.30)); quad(0.98, 0.46, via: 0.92, 0.26); quad(0.86, 0.70, via: 1.00, 0.62); quad(0.72, 0.56, via: 0.82, 0.58); quad(0.62, 0.30, via: 0.66, 0.44); path.close(); path.fill()
-            path.removeAllPoints()
-            path.move(to: p(0.70, 0.58)); quad(0.86, 0.72, via: 0.82, 0.60); quad(0.68, 0.72, via: 0.78, 0.78); path.close(); path.fill()
+            NSBezierPath(cgPath: beak.applying(CGAffineTransform(scaleX: k, y: k)).cgPath).fill()
             NSGraphicsContext.current?.cgContext.setBlendMode(.clear)
-            NSBezierPath(ovalIn: NSRect(x: 0.47 * s, y: 0.37 * s, width: 0.12 * s, height: 0.12 * s)).fill()
+            NSBezierPath(ovalIn: NSRect(x: 0.47 * s * k, y: 0.37 * s * k, width: 0.12 * s * k, height: 0.12 * s * k)).fill()
             return true
         }
         image.isTemplate = true

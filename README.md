@@ -64,7 +64,7 @@ Cleanup is nearly all of the wait. Turning it off in the menu leaves only the re
 | App binary, FluidAudio linked in | 18 MB |
 | App icon | 648 KB |
 
-The Swift source is about 752 lines in 10 files.
+The Swift source is about 758 lines in 10 files.
 
 ## Privacy
 
