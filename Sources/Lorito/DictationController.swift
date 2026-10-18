@@ -42,7 +42,7 @@ final class DictationController {
             // Buffers arrive every 10 ms; room noise per buffer spans 0.0003 to 0.0015, so smooth first.
             // ponytail: constants tuned on the built-in mic at 27% input volume; these are the knobs if another mic misbehaves
             smooth += (l - smooth) * 0.2                                       // ~50 ms window
-            if smooth < peakHold * 0.3 { noiseFloor += (smooth - noiseFloor) * 0.02 }
+            if smooth < noiseFloor * 3 { noiseFloor += (smooth - noiseFloor) * 0.02 }   // the quiet band only: a floor that follows the voice freezes the bars
             peakHold = max(smooth, peakHold * 0.995, noiseFloor * 6)
             let rel = max(0, smooth - noiseFloor * 2.5) / max(peakHold - noiseFloor * 2.5, 1e-4)
             level = max(rel, level * 0.93)                                     // ~0.3 s release
@@ -82,6 +82,7 @@ final class DictationController {
         guard state == .idle || state == .done else { return }
         guard engine != nil else { show(.fallback("Model still loading")); return }
         do {
+            (smooth, noiseFloor, peakHold) = (0, 0.01, 0.01)   // a fresh meter: the key click that ended the last dictation must not be this one's peak
             try recorder.start()
             if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp() }
             state = .listening

@@ -1,4 +1,4 @@
-<p align="center"><img src="Resources/AppIcon.png" width="160" alt="Lorito icon"></p>
+<p align="center"><img src="Resources/SocialPreview.png" width="640" alt="Lorito: speak, it types. Local and fast, on your Mac."></p>
 
 # Lorito
 
