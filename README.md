@@ -35,7 +35,7 @@ Two ways, same result:
 - **Hold** Left Option, speak, release.
 - **Tap** Left Option, speak, tap again. Esc or the ✕ in the pill discards. It stops by itself after two minutes without speech.
 
-Any other key while holding cancels, so Option shortcuts like `€` or `@` still work. A pill at the bottom of the screen shows listening, transcribing, cleaning up, and inserted, or the reason a paste did not land. The language is detected automatically; Dutch and English are verified.
+Any other key while holding cancels, so Option shortcuts like `€` or `@` still work. A glass pill at the bottom of the screen shows the parrot with live level bars at its beak while it listens, then transcribing, cleaning up, and inserted, or the reason a paste did not land. The language is detected automatically; Dutch and English are verified.
 
 The menu has a microphone picker ("Automatic" is the built-in microphone; Bluetooth headsets work when picked but miss the first half second), a cleanup toggle, Launch at Login, Recent transcriptions (the last five; clicking one copies it), and Quit.
 
@@ -62,7 +62,7 @@ Cleanup is nearly all of the wait. Turning it off in the menu leaves only the re
 | App binary, FluidAudio linked in | 18 MB |
 | App icon | 1.0 MB |
 
-The Swift source is about 794 lines in 10 files.
+The Swift source is about 786 lines in 10 files.
 
 ## Privacy
 

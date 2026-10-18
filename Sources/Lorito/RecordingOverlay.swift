@@ -35,43 +35,34 @@ struct OverlayView: View {
 
     let controller: DictationController
 
+    /// The app icon's parrot in its own colours; while listening the level bars come out of its beak.
+    private static let parrot: NSImage = {
+        let orange = NSColor.systemOrange
+        let image = LoritoApp.parrot(size: 30, bars: orange, beak: orange.blended(withFraction: 0.45, of: .black)!)
+        image.isTemplate = false
+        return image
+    }()
+
     var body: some View {
         HStack(spacing: 10) {
-            icon
+            HStack(spacing: 5) {
+                Image(nsImage: Self.parrot)
+                if controller.state == .listening {
+                    LevelBars(level: controller.level).offset(y: 1).transition(.opacity.combined(with: .scale(scale: 0.6)))
+                }
+            }
             label
             if controller.handsFree {
                 Image(systemName: "xmark.circle.fill").symbolRenderingMode(.hierarchical).foregroundStyle(.primary).onTapGesture { controller.cancel() }
             }
         }
-        .frame(height: 22)
+        .frame(height: 30)
         .padding(.horizontal, 16)
-        .padding(.vertical, 10)
-        .background(.ultraThinMaterial, in: Capsule())
-        .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
+        .padding(.vertical, 6)
+        .glassEffect()
         .frame(width: Self.canvas.width, height: Self.canvas.height)
         .animation(.easeOut(duration: 0.08), value: controller.level)
         .animation(.spring(duration: 0.35, bounce: 0.15), value: controller.state)
-    }
-
-    private var icon: some View {
-        Group {
-            switch controller.state {
-            case .listening:
-                Image(systemName: "mic.fill").foregroundStyle(.red)
-                LevelBars(level: controller.level)
-            case .transcribing:
-                Image(systemName: "waveform").symbolEffect(.variableColor.iterative)
-            case .cleaning:
-                Image(systemName: "sparkles").symbolEffect(.pulse)
-            case .done:
-                Image(systemName: "checkmark").foregroundStyle(.green)
-            case .fallback:
-                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-            case .idle:
-                EmptyView()
-            }
-        }
-        .transition(.opacity.combined(with: .scale(scale: 0.6)))
     }
 
     private var label: some View {
@@ -104,7 +95,7 @@ struct LevelBars: View {
                 // `level` is already relative to the recent peak; per-bar weights so the bars differ.
                 let weight = [0.6, 0.9, 1.0, 1.0, 0.8, 0.5][i]
                 Capsule()
-                    .fill(.primary)
+                    .fill(Color.primary)
                     .frame(width: 3, height: 4 + CGFloat(min(1, Double(level)) * weight) * 14)
             }
         }

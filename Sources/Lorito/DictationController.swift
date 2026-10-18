@@ -165,11 +165,12 @@ final class DictationController {
         for (name, s) in states + [("listening-handsfree", .listening)] {
             state = s
             handsFree = name.hasSuffix("handsfree")
-            let r = ImageRenderer(content: OverlayView(controller: self).background(.blue.opacity(0.3)))
-            r.scale = 2
-            if let img = r.nsImage, let tiff = img.tiffRepresentation,
-               let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) {
-                try? png.write(to: URL(fileURLWithPath: dir).appendingPathComponent("overlay-\(name).png"))
+            let view = NSHostingView(rootView: OverlayView(controller: self).background(.blue.opacity(0.3)))
+            view.frame = NSRect(origin: .zero, size: OverlayView.canvas)
+            view.layoutSubtreeIfNeeded()
+            if let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) {
+                view.cacheDisplay(in: view.bounds, to: rep)
+                try? rep.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: dir).appendingPathComponent("overlay-\(name).png"))
             }
         }
         exit(0)
