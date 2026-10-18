@@ -5,6 +5,7 @@ What it is, how to install and use it: `README.md`. This file is what keeps a ch
 ## Docs
 
 - After a change, check `README.md` and this file; rewrite only a sentence the change made wrong. Replace and delete before adding; no history, no changelog, no rationale a user does not need. The README's size and speed figures are measurements (`wc -l Sources/Lorito/*.swift`, `du -sh` on the installed binary, the log); a code change re-measures them.
+- A change a user notices gets one line under Unreleased in `CHANGELOG.md`; a release turns that heading into the version and date and bumps `CFBundleShortVersionString` in `build-app.sh`.
 
 ## Build and test
 
