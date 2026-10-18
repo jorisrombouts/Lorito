@@ -55,13 +55,6 @@ if args.contains("--insert-test") {
     RunLoop.main.run()
 }
 
-// `Lorito --launch-at-login on|off` (run from the installed bundle) registers the app with launchd.
-if let mode = arg(after: "--launch-at-login") {
-    Settings.launchAtLogin = mode == "on"
-    print("launch at login:", Settings.launchAtLogin ? "on" : "off", "(\(Bundle.main.bundlePath))")
-    exit(0)
-}
-
 // Normal launch: the menu bar app. stderr (NSLog) goes to ~/Library/Logs/Lorito.log.
 let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Lorito.log").path
 freopen(logPath, "a", stderr)

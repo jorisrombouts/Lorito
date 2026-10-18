@@ -1,4 +1,3 @@
 .build/
 build/
-*.app
 .DS_Store

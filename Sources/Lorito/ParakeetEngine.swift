@@ -5,7 +5,7 @@ import Foundation
 actor ParakeetEngine {
     private let asr: AsrManager
 
-    /// First use downloads the models (461 MB) to ~/Library/Application Support/FluidAudio; later loads take 0.1 s.
+    /// First use downloads the models (461 MB) to ~/Library/Application Support/FluidAudio; later loads take 0.1 to 0.2 s.
     init() async throws {
         asr = AsrManager(models: try await AsrModels.downloadAndLoad(version: .v3))
     }

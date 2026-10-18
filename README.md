@@ -17,13 +17,16 @@ Everything runs on your Mac. Nothing leaves it.
 
 ```sh
 git clone https://github.com/jorisrombouts/Lorito.git && cd Lorito
+./make-signing-cert.sh   # once; asks for your login password
 ./build-app.sh install
 ```
+
+The certificate gives the app a fixed identity, so the permissions below survive updates. Updating is `git pull && ./build-app.sh install`.
 
 The first launch downloads the recognition models, 461 MB, into `~/Library/Application Support/FluidAudio` and compiles them for the Neural Engine, about 12 s in all, during which the menu bar icon is there but dictation is not. Later launches load them in under a second. The app is installed in `/Applications` and appears in the menu bar as a waveform.
 macOS asks for two permissions on first use: Microphone, and Accessibility, which is what lets the app paste at your cursor.
 
-Upgrading from an install named `lorito`, lowercase: quit it, run `tccutil reset All nl.joris.lorito`, delete `/Applications/lorito.app`, then install as above and grant the two permissions again. If you made a signing certificate, run `./make-signing-cert.sh` again; it is now called "Lorito Dev", and the old "lorito Dev" can be deleted in Keychain Access.
+Upgrading from an install named `lorito`, lowercase: quit it, run `tccutil reset All nl.joris.lorito`, delete `/Applications/lorito.app`, then install as above and grant the two permissions again. The certificate is now called "Lorito Dev"; the old "lorito Dev" can be deleted in Keychain Access.
 
 ## Use
 
@@ -59,7 +62,7 @@ Cleanup is nearly all of the wait. Turning it off in the menu leaves only the re
 | App binary, FluidAudio linked in | 18 MB |
 | App icon | 1.2 MB |
 
-The Swift source is about 733 lines in 10 files.
+The Swift source is about 726 lines in 10 files.
 
 ## Privacy
 
@@ -69,7 +72,6 @@ One download of the recognition models on first launch, no other network calls. 
 
 - The pill says "Accessibility permission missing": grant it in System Settings. If it is already enabled there, the entry is stale: run `tccutil reset Accessibility nl.joris.lorito`, relaunch the app, grant it again. The transcript is still in Recent transcriptions.
 - Timings per dictation are in `~/Library/Logs/Lorito.log`.
-- If you rebuild often, run `./make-signing-cert.sh` once so permissions survive rebuilds.
 
 ## Development
 
