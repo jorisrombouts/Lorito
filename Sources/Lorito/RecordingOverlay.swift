@@ -53,38 +53,39 @@ struct OverlayView: View {
         .animation(.spring(duration: 0.35, bounce: 0.15), value: controller.state)
     }
 
-    @ViewBuilder private var icon: some View {
-        Group { iconContent }.transition(.opacity.combined(with: .scale(scale: 0.6)))
-    }
-
-    @ViewBuilder private var iconContent: some View {
-        switch controller.state {
-        case .listening:
-            Image(systemName: "mic.fill").foregroundStyle(.red)
-            LevelBars(level: controller.level)
-        case .transcribing:
-            Image(systemName: "waveform").symbolEffect(.variableColor.iterative)
-        case .cleaning:
-            Image(systemName: "sparkles").symbolEffect(.pulse)
-        case .done:
-            Image(systemName: "checkmark").foregroundStyle(.green)
-        case .fallback:
-            Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
-        case .idle:
-            EmptyView()
+    private var icon: some View {
+        Group {
+            switch controller.state {
+            case .listening:
+                Image(systemName: "mic.fill").foregroundStyle(.red)
+                LevelBars(level: controller.level)
+            case .transcribing:
+                Image(systemName: "waveform").symbolEffect(.variableColor.iterative)
+            case .cleaning:
+                Image(systemName: "sparkles").symbolEffect(.pulse)
+            case .done:
+                Image(systemName: "checkmark").foregroundStyle(.green)
+            case .fallback:
+                Image(systemName: "exclamationmark.triangle").foregroundStyle(.orange)
+            case .idle:
+                EmptyView()
+            }
         }
+        .transition(.opacity.combined(with: .scale(scale: 0.6)))
     }
 
     private var label: some View {
-        Text(text)
+        let text = Self.text(for: controller.state)
+        return Text(text)
             .font(.body.weight(.medium))
             .fixedSize()
             .id(text)   // new text fades in while the capsule springs to its new width
             .transition(.opacity.combined(with: .scale(scale: 0.9)))
     }
 
-    private var text: String {
-        switch controller.state {
+    /// Pill and menu wording for a state.
+    static func text(for state: DictationController.State) -> String {
+        switch state {
         case .idle: ""
         case .listening: "Listening"
         case .transcribing: "Transcribing"

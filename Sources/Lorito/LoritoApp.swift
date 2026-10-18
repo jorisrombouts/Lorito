@@ -51,13 +51,7 @@ struct LoritoApp: App {
     }
 
     private var status: String {
-        switch controller.state {
-        case .idle: "Idle — hold or tap Left Option to dictate"
-        case .listening: "Recording…"
-        case .transcribing, .cleaning: "Working…"
-        case .done: "Inserted"
-        case .fallback(let s): s
-        }
+        controller.state == .idle ? "Idle — hold or tap Left Option to dictate" : OverlayView.text(for: controller.state)
     }
 
     @ViewBuilder private var menuIcon: some View {
@@ -68,15 +62,16 @@ struct LoritoApp: App {
         }
     }
 
-    // The app icon as a menu bar template: the paths and bar sampling of make-icon.swift, run at the icon's own 680 pt
-    // (SwiftUI `Path.contains` flattens curves with an absolute tolerance, so it is scale-dependent) and scaled down, so
-    // the bars match the shipped icns exactly (ten show, the eleventh is under the beak). Eye cut out.
-    // Listening adds a recording dot in the free bottom-right corner; working draws the parrot at half strength.
+    // The parrot of the app icon, drawn once for both: bars on the head-and-neck silhouette, solid hooked beak, eye.
+    // The paths are sampled at 680 pt whatever the output size, because SwiftUI `Path.contains` flattens curves with an
+    // absolute tolerance and would give other bar tops at 18 pt. Eleven columns, ten show, the last is under the beak.
+    // Menu bar: black template, eye cut out; listening adds a dot in the free corner, working dims the whole glyph.
     private static let parrot = parrot()
     private static let parrotListening = parrot(dot: true)
     private static let parrotWorking = parrot(alpha: 0.45)
-    private static func parrot(dot: Bool = false, alpha: CGFloat = 1) -> NSImage {
-        let image = NSImage(size: NSSize(width: 18, height: 18), flipped: true) { rect in
+    static func parrot(size: CGFloat = 18, bars: NSColor = .black, beak beakColor: NSColor = .black, eye: NSColor? = nil,
+                       dot: Bool = false, alpha: CGFloat = 1) -> NSImage {
+        let image = NSImage(size: NSSize(width: size, height: size), flipped: true) { rect in
             let s: CGFloat = 680, k = rect.width / s
             func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * s, y: y * s) }
             var body = Path()
@@ -87,9 +82,9 @@ struct LoritoApp: App {
             beak.move(to: p(0.70, 0.58)); beak.addQuadCurve(to: p(0.86, 0.72), control: p(0.82, 0.60)); beak.addQuadCurve(to: p(0.68, 0.72), control: p(0.78, 0.78)); beak.closeSubpath()
             let ctx = NSGraphicsContext.current!.cgContext
             ctx.setAlpha(alpha); ctx.beginTransparencyLayer(auxiliaryInfo: nil)   // dim the glyph as one layer
-            NSColor.black.setFill()
-            let bars = 11, pitch = 0.72 * s / 11, w = pitch * 0.58
-            for i in 0..<bars {   // one rounded bar per column, its ends on the silhouette
+            bars.setFill()
+            let pitch = 0.72 * s / 11, w = pitch * 0.58
+            for i in 0..<11 {   // one rounded bar per column, its ends on the silhouette
                 let x = 0.06 * s + pitch * (CGFloat(i) + 0.5)
                 var top: CGFloat? = nil, bottom: CGFloat = 0
                 var y: CGFloat = 0
@@ -97,15 +92,16 @@ struct LoritoApp: App {
                 guard let t = top else { continue }
                 NSBezierPath(roundedRect: NSRect(x: (x - w / 2) * k, y: t * k, width: w * k, height: max(bottom - t, w) * k), xRadius: w * k / 2, yRadius: w * k / 2).fill()
             }
+            beakColor.setFill()
             NSBezierPath(cgPath: beak.applying(CGAffineTransform(scaleX: k, y: k)).cgPath).fill()
-            ctx.setBlendMode(.clear)
+            if let eye { eye.setFill() } else { ctx.setBlendMode(.clear) }
             NSBezierPath(ovalIn: NSRect(x: 0.47 * s * k, y: 0.37 * s * k, width: 0.12 * s * k, height: 0.12 * s * k)).fill()
             ctx.setBlendMode(.normal)
-            if dot { NSBezierPath(ovalIn: NSRect(x: 0.80 * s * k, y: 0.80 * s * k, width: 0.20 * s * k, height: 0.20 * s * k)).fill() }
+            if dot { bars.setFill(); NSBezierPath(ovalIn: NSRect(x: 0.80 * s * k, y: 0.80 * s * k, width: 0.20 * s * k, height: 0.20 * s * k)).fill() }
             ctx.endTransparencyLayer()
             return true
         }
-        image.isTemplate = true
+        image.isTemplate = eye == nil
         return image
     }
 
@@ -114,5 +110,28 @@ struct LoritoApp: App {
             ? "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
             : "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         NSWorkspace.shared.open(URL(string: pane)!)
+    }
+}
+
+/// The app icon: Apple's Tahoe recipe in system orange, light tint down to the colour, white glyph, a darker shade for depth.
+/// `Lorito --icon out.png` renders it at 1024 px; build-app.sh turns that into the bundle's icns.
+struct AppIconView: View {
+    static func mix(_ c: NSColor, _ with: NSColor, _ f: CGFloat) -> Color { Color(nsColor: c.blended(withFraction: f, of: with)!) }
+    var body: some View {
+        let orange = NSColor.systemOrange
+        ZStack {
+            RoundedRectangle(cornerRadius: 184, style: .continuous)   // Apple macOS icon grid: 824 pt square, 184 pt corners
+                .fill(LinearGradient(colors: [Self.mix(orange, .white, 0.30), Self.mix(orange, .black, 0.10)], startPoint: .top, endPoint: .bottom))
+                .overlay(RoundedRectangle(cornerRadius: 184, style: .continuous)
+                    .fill(LinearGradient(colors: [.white.opacity(0.28), .white.opacity(0)], startPoint: .top, endPoint: .center)))
+                .overlay(RoundedRectangle(cornerRadius: 184, style: .continuous).strokeBorder(.white.opacity(0.18), lineWidth: 4))
+                .shadow(color: .black.opacity(0.25), radius: 20, y: 12)
+            Image(nsImage: LoritoApp.parrot(size: 680, bars: .white, beak: orange.blended(withFraction: 0.45, of: .black)!,
+                                            eye: orange.blended(withFraction: 0.05, of: .black)!))
+                .offset(x: -30, y: 90)
+                .shadow(color: .black.opacity(0.25), radius: 14, y: 10)
+        }
+        .padding(100)
+        .frame(width: 1024, height: 1024)
     }
 }

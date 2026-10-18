@@ -73,7 +73,7 @@ final class DictationController {
     func refreshPermissions(prompt: Bool) {
         let mic = AVCaptureDevice.authorizationStatus(for: .audio)
         if mic == .notDetermined { AVCaptureDevice.requestAccess(for: .audio) { _ in } }
-        problem = !HotkeyMonitor.ensureAccessibility(prompt: prompt) ? "Accessibility permission missing (needed to paste)"
+        problem = !AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": prompt] as CFDictionary) ? "Accessibility permission missing (needed to paste)"
             : mic == .denied ? "Microphone access denied" : engineProblem
     }
 

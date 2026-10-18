@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import SwiftUI
 
 let args = CommandLine.arguments
 func arg(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
@@ -53,6 +54,17 @@ if args.contains("--insert-test") {
         exit(0)
     }
     RunLoop.main.run()
+}
+
+// App icon: `Lorito --icon out.png` writes the 1024 px icon; build-app.sh makes the icns from it.
+if let path = arg(after: "--icon") {
+    MainActor.assumeIsolated {
+        let r = ImageRenderer(content: AppIconView())
+        r.scale = 1
+        let png = NSBitmapImageRep(data: r.nsImage!.tiffRepresentation!)!.representation(using: .png, properties: [:])!
+        try! png.write(to: URL(fileURLWithPath: path))
+    }
+    exit(0)
 }
 
 // Normal launch: the menu bar app. stderr (NSLog) goes to ~/Library/Logs/Lorito.log.

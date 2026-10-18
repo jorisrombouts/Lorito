@@ -10,7 +10,16 @@ pkill -x Lorito 2>/dev/null || true   # a running app whose bundle is replaced f
 rm -rf "$APP"
 mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp .build/release/Lorito "$APP/Contents/MacOS/"
-cp Resources/AppIcon.icns "$APP/Contents/Resources/"
+
+# The icon is drawn by the app itself (`--icon`), so it cannot drift from the menu bar glyph.
+T=$(mktemp -d) && mkdir "$T/AppIcon.iconset"
+.build/release/Lorito --icon "$T/icon.png"
+for s in 16 32 128 256 512; do
+  sips -z $s $s "$T/icon.png" --out "$T/AppIcon.iconset/icon_${s}x${s}.png" >/dev/null
+  sips -z $((s*2)) $((s*2)) "$T/icon.png" --out "$T/AppIcon.iconset/icon_${s}x${s}@2x.png" >/dev/null
+done
+iconutil -c icns "$T/AppIcon.iconset" -o "$APP/Contents/Resources/AppIcon.icns"
+rm -rf "$T"
 
 cat > "$APP/Contents/Info.plist" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>

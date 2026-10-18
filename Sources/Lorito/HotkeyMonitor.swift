@@ -19,11 +19,6 @@ final class HotkeyMonitor {
     private var pressedAt = Date()
     private var monitors: [Any] = []
 
-    static func ensureAccessibility(prompt: Bool) -> Bool {
-        let opts = ["AXTrustedCheckOptionPrompt": prompt] as CFDictionary
-        return AXIsProcessTrustedWithOptions(opts)
-    }
-
     func start() {
         let handle: (NSEvent) -> Void = { [weak self] e in self?.handle(e) }
         monitors = [
