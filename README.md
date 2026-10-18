@@ -2,18 +2,19 @@
 
 # Lorito
 
-Hold Left Option and speak, or tap it and speak hands-free. The text appears at your cursor, in any app.
+Lorito repeats exactly what you say, in text. Fast, and all on your Mac.
 
-- Recognition: NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. 25 European languages, detected automatically; silence and noise come back empty.
-- Cleanup: Apple's on-device Foundation Models, the Apple Intelligence system model of about 3B parameters, not bundled.
+Lorito is a small dictation app that lives in the menu bar. Hold Left Option and talk, or tap it to talk hands-free. When you stop, the text shows up where your cursor is, in any app, in under a second.
 
-Everything runs on your Mac. Nothing leaves it.
+That is the whole app. No window, no account, no settings page. The menu has a microphone picker, a cleanup switch and your last five dictations. After the first launch it never goes online.
+
+Speech recognition uses NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. It understands 25 European languages and picks the right one by itself. Cleanup uses Apple's on-device Foundation Models to fix punctuation, drop filler words and apply corrections like "no wait". The source is 788 lines of Swift with one dependency.
 
 ## Requirements
 
-- Apple Silicon Mac running macOS 26
+- A Mac with Apple Silicon and macOS 26
 - Xcode Command Line Tools: `xcode-select --install`
-- Apple Intelligence enabled, for the cleanup step. The app works without it and inserts the raw transcript.
+- Apple Intelligence turned on, for cleanup. Without it you get the raw transcript.
 
 ## Install
 
@@ -23,27 +24,22 @@ git clone https://github.com/jorisrombouts/Lorito.git && cd Lorito
 ./build-app.sh install
 ```
 
-The certificate gives the app a fixed identity, so the permissions below survive updates. Updating is `git pull && ./build-app.sh install`.
+The certificate gives the app a fixed identity, so you grant permissions once and they survive updates. To update: `git pull && ./build-app.sh install`.
 
-The first launch downloads the recognition models, 461 MB, into `~/Library/Application Support/FluidAudio` and compiles them for the Neural Engine, about 12 s in all, during which the menu bar icon is there but dictation is not. Later launches load them in under a second. The app is installed in `/Applications` and appears in the menu bar as a parrot; a dot joins it while it listens and it dims while it works.
-macOS asks for two permissions on first use: Microphone, and Accessibility, which is what lets the app paste at your cursor.
+The first launch downloads the recognition models (461 MB) and compiles them. That takes about 12 seconds; the parrot is in the menu bar but dictation is not ready yet. The app itself is 18 MB. macOS then asks for Microphone and Accessibility. Accessibility is what lets the app paste at your cursor.
 
 ## Use
 
-Two ways, same result:
+- **Hold** Left Option, talk, let go.
+- **Tap** Left Option, talk, tap again. Esc or the ✕ in the pill throws it away. It stops on its own after two minutes without speech.
 
-- **Hold** Left Option, speak, release.
-- **Tap** Left Option, speak, tap again. Esc or the ✕ in the pill discards. It stops by itself after two minutes without speech.
+Pressing any other key while holding cancels, so shortcuts like `€` or `@` still work. A pill at the bottom of the screen shows the sound level while you talk, then what it is doing, then "Inserted" or why the paste failed. Your clipboard is put back after the paste. Dutch and English are tested.
 
-Any other key while holding cancels, so Option shortcuts like `€` or `@` still work. A glass pill at the bottom of the screen shows the parrot with live level bars at its beak while it listens, then transcribing, cleaning up, and inserted, or the reason a paste did not land. The language is detected automatically; Dutch and English are verified.
-
-The menu has a microphone picker ("Automatic" is the built-in microphone; Bluetooth headsets work when picked but miss the first half second), a cleanup toggle, Launch at Login, Recent transcriptions (the last five; clicking one copies it), and Quit.
-
-Cleanup fixes punctuation and capitalisation, removes fillers, and applies self-corrections such as "no wait". It never translates. Dictations under four words are inserted as is.
+In the microphone picker, "Automatic" is the built-in mic. Bluetooth headsets work when picked but miss the first half second. Dictations under four words are inserted as is. Cleanup never translates and never answers a question.
 
 ## Speed
 
-Measured on an M4 Pro, from key release to text at the cursor. Timings for your own machine are in the log, see Troubleshooting.
+Measured on an M4 Pro, from letting go of the key to text at the cursor. Your own timings are in `~/Library/Logs/Lorito.log`.
 
 | Dictation | Recognition | Cleanup | Total |
 |---|---|---|---|
@@ -52,27 +48,12 @@ Measured on an M4 Pro, from key release to text at the cursor. Timings for your 
 | 10 s | 0.2 s | 0.7 s | 0.9 s |
 | 22 s | 0.1 s | 0.7 s | 0.85 s |
 
-Cleanup is nearly all of the wait. Turning it off in the menu leaves only the recognition column.
-
-## Size
-
-| Component | Size |
-|---|---|
-| Recognition models, in Application Support | 461 MB |
-| App binary, FluidAudio linked in | 18 MB |
-| App icon | 1.0 MB |
-
-The Swift source is about 786 lines in 10 files.
-
-## Privacy
-
-One download of the recognition models on first launch, no other network calls. The models and Apple Intelligence run on-device. Your clipboard is restored after the paste.
+Cleanup is nearly all of the wait. Turn it off in the menu and only recognition is left.
 
 ## Troubleshooting
 
-- The pill says "Accessibility permission missing": grant it in System Settings. If it is already enabled there, the entry is stale: run `tccutil reset Accessibility nl.joris.lorito`, relaunch the app, grant it again. The transcript is still in Recent transcriptions.
-- Timings per dictation are in `~/Library/Logs/Lorito.log`.
+If the paste does not land, the pill says why. It is the Accessibility permission, and your text is still in the menu. The fix for a stale permission and what the log holds are in `AGENTS.md`.
 
 ## Development
 
-A Swift Package with no Xcode project; FluidAudio is its one dependency. `./build-app.sh` builds and runs `build/Lorito.app`. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.
+A Swift Package, no Xcode project, one dependency. `./build-app.sh` builds and runs `build/Lorito.app`. `./check.sh` is the smoke test. `AGENTS.md` has the rules for changing the code.
