@@ -42,7 +42,7 @@ struct LoritoApp: App {
                 }
                 Divider()
             }
-            Button("Quit lorito") { exit(0) }
+            Button("Quit Lorito") { exit(0) }
                 .keyboardShortcut("q")
         } label: {
             menuIcon

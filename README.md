@@ -1,4 +1,4 @@
-# lorito
+# Lorito
 
 Hold Left Option and speak, or tap it and speak hands-free. The text appears at your cursor, in any app.
 
@@ -22,6 +22,8 @@ git clone https://github.com/jorisrombouts/lorito.git && cd lorito
 
 The first launch downloads the recognition models, 461 MB, into `~/Library/Application Support/FluidAudio` and compiles them for the Neural Engine, about 12 s in all, during which the menu bar icon is there but dictation is not. Later launches load them in under a second. The app is installed in `/Applications` and appears in the menu bar as a waveform.
 macOS asks for two permissions on first use: Microphone, and Accessibility, which is what lets the app paste at your cursor.
+
+Upgrading from an install named `lorito`, lowercase: quit it, run `tccutil reset All nl.joris.lorito`, delete `/Applications/lorito.app`, then install as above and grant the two permissions again. If you made a signing certificate, run `./make-signing-cert.sh` again; it is now called "Lorito Dev", and the old "lorito Dev" can be deleted in Keychain Access.
 
 ## Use
 
@@ -66,9 +68,9 @@ One download of the recognition models on first launch, no other network calls. 
 ## Troubleshooting
 
 - The pill says "Accessibility permission missing": grant it in System Settings. If it is already enabled there, the entry is stale: run `tccutil reset Accessibility nl.joris.lorito`, relaunch the app, grant it again. The transcript is still in Recent transcriptions.
-- Timings per dictation are in `~/Library/Logs/lorito.log`.
+- Timings per dictation are in `~/Library/Logs/Lorito.log`.
 - If you rebuild often, run `./make-signing-cert.sh` once so permissions survive rebuilds.
 
 ## Development
 
-A Swift Package with no Xcode project; FluidAudio is its one dependency. `./build-app.sh` builds and runs `build/lorito.app`. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.
+A Swift Package with no Xcode project; FluidAudio is its one dependency. `./build-app.sh` builds and runs `build/Lorito.app`. `./check.sh` is the smoke test. The rules for changing the code are in `AGENTS.md`.

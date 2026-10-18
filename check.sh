@@ -4,7 +4,7 @@ set -eu
 cd "$(dirname "$0")"
 T=$(mktemp -d)
 swift build --quiet
-BIN=.build/debug/lorito
+BIN=.build/debug/Lorito
 
 say -v Samantha -o "$T/en.aiff" "Hello, this is a test of speech recognition."
 say -v Xander -o "$T/nl.aiff" "Hallo, dit is een test van lokale spraakherkenning."
