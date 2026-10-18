@@ -16,7 +16,7 @@ Everything runs on your Mac. Nothing leaves it.
 ## Install
 
 ```sh
-git clone https://github.com/jorisrombouts/lorito.git && cd lorito
+git clone https://github.com/jorisrombouts/Lorito.git && cd Lorito
 ./build-app.sh install
 ```
 
