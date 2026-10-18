@@ -20,7 +20,8 @@ final class DictationController {
     private var lastVoice = Date()
     private var smooth: Float = 0
     private var noiseFloor: Float = 0.01
-    private var peakHold: Float = 0.01
+    private var peakHold: Float = 0
+    private var levelMax: Float = 0        // logged per dictation
     private(set) var transcripts: [String] = []
     private(set) var problem: String?          // shown in the menu
     private var engineProblem: String?
@@ -42,10 +43,10 @@ final class DictationController {
             // Buffers arrive every 10 ms; room noise per buffer spans 0.0003 to 0.0015, so smooth first.
             // ponytail: constants tuned on the built-in mic at 27% input volume; these are the knobs if another mic misbehaves
             smooth += (l - smooth) * 0.2                                       // ~50 ms window
-            if smooth < noiseFloor * 3 { noiseFloor += (smooth - noiseFloor) * 0.02 }   // the quiet band only: a floor that follows the voice freezes the bars
+            if smooth < peakHold * 0.3 { noiseFloor += (smooth - noiseFloor) * 0.02 }
             peakHold = max(smooth, peakHold * 0.995, noiseFloor * 6)
             let rel = max(0, smooth - noiseFloor * 2.5) / max(peakHold - noiseFloor * 2.5, 1e-4)
-            level = max(rel, level * 0.93)                                     // ~0.3 s release
+            level = max(rel, level * 0.93); levelMax = max(levelMax, level)    // ~0.3 s release
             if rel > 0.3 { lastVoice = Date() } else if handsFree, Date().timeIntervalSince(lastVoice) > 120 { release() }
         } }
         hotkey.onPress = { [self] in press() }
@@ -82,7 +83,7 @@ final class DictationController {
         guard state == .idle || state == .done else { return }
         guard engine != nil else { show(.fallback("Model still loading")); return }
         do {
-            (smooth, noiseFloor, peakHold) = (0, 0.01, 0.01)   // a fresh meter: the key click that ended the last dictation must not be this one's peak
+            (smooth, peakHold, levelMax) = (0, 0, 0)   // the first syllable sets the peak; one carried over or started above a soft voice leaves the bars flat until it decays
             try recorder.start()
             if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp() }
             state = .listening
@@ -131,8 +132,8 @@ final class DictationController {
             let t2 = Date()
             let notInserted = TextInserter.insert(text)
             transcripts = Array(([text] + transcripts).prefix(5))
-            NSLog("dictation mode=%@ audio_s=%.1f stt_ms=%d clean_ms=%d insert_ms=%d fallback=%d",
-                  mode, audioSeconds, sttMs, cleanMs, ms(since: t2), fellBack ? 1 : 0)
+            NSLog("dictation mode=%@ audio_s=%.1f stt_ms=%d clean_ms=%d insert_ms=%d fallback=%d meter floor=%.4f peak=%.4f level_max=%.2f",
+                  mode, audioSeconds, sttMs, cleanMs, ms(since: t2), fellBack ? 1 : 0, noiseFloor, peakHold, levelMax)
             // A failed paste is the one the user must act on, so it outranks a cleanup fallback and holds longer.
             let (next, hold): (State, Int) =
                 if let notInserted { (.fallback(notInserted), 2500) }
