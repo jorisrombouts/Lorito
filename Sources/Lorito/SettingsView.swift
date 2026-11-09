@@ -54,7 +54,7 @@ struct GeneralPane: View {
             }
 
             Section {
-                Toggle("Tidy up the whole text", isOn: $polishEnabled)
+                Toggle("Tidy up the whole text", isOn: cleanupEnabled ? $polishEnabled : .constant(false))
                     .disabled(!cleanupEnabled || controller.cleanupUnavailable != nil)
             } footer: {
                 Text("Reads the cleaned text once more as a whole and removes leftovers: repeated phrases, false starts, stray fillers. Never changes or adds a word. Takes a moment longer.")

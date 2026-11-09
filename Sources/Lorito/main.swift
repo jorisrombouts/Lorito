@@ -32,7 +32,7 @@ if let raw = arg(after: "--polish") {
         cleaner.warmUp(polish: true)
         try? await Task.sleep(for: .seconds(2))
         let seconds = Double(raw.count) / 15
-        let cleaned = await cleaner.clean(raw, audioSeconds: seconds) ?? raw
+        guard let cleaned = await cleaner.clean(raw, audioSeconds: seconds) else { print("text: (fallback)"); exit(0) }   // the app skips polish then too
         print("clean:", cleaned)
         let t0 = Date()
         let (text, outcome) = await cleaner.polish(cleaned, audioSeconds: seconds)

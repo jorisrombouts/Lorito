@@ -8,7 +8,7 @@ Lorito is a small dictation app that lives in the menu bar. Hold Left Option and
 
 That is the whole app. No account, no subscription. The menu shows your last five dictations; a small Settings window holds the hotkey, the microphone and the cleanup switch. After the first launch it never goes online.
 
-Speech recognition uses NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. It understands 25 European languages and picks the right one by itself. Cleanup uses Apple's on-device Foundation Models to fix punctuation, drop filler words and apply corrections like "no wait". The source is 1,396 lines of Swift with one dependency, under the MIT license.
+Speech recognition uses NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. It understands 25 European languages and picks the right one by itself. Cleanup uses Apple's on-device Foundation Models to fix punctuation, drop filler words and apply corrections like "no wait". The source is 1,505 lines of Swift with one dependency, under the MIT license.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ On first launch a welcome window walks you through three things: Microphone acce
 
 Left Option is the default; Settings (⌘, from the menu) offers Right Option, Right Command, Right Control and Fn. Pressing any other key while holding cancels, so shortcuts like `€` or `@` still work. A pill at the bottom of the screen shows the sound level while you talk, then what it is doing, then "Inserted" or why the paste failed. Your clipboard is put back after the paste, images and files included, and clipboard managers are told to skip the dictation. In a password field Lorito does nothing. Dutch and English are tested; recognition covers 25 European languages, no Asian ones.
 
-In Settings, the "Automatic" microphone is the built-in mic. Bluetooth headsets work when picked but miss the first half second. Dictations under four words are inserted as is. Cleanup never translates and never answers a question; if its output strays from what you said, the raw transcript goes in instead. The optional "Tidy up the whole text" reads the cleaned text once more and removes leftovers such as a repeated sentence or a trailing "or something"; it may only delete words, and anything else keeps the first cleanup. It adds about half a second.
+In Settings, the "Automatic" microphone is the built-in mic. Bluetooth headsets work when picked but miss the first half second. Dictations under four words are inserted as is. Cleanup never translates and never answers a question; if its output strays from what you said, the raw transcript goes in instead. The optional "Tidy up the whole text" reads the cleaned text once more and removes leftovers such as a repeated sentence or a trailing "or something"; it may only delete words, a lost "not" or a changed number keeps the first cleanup, and it adds about half a second per three sentences.
 
 ## Speed
 

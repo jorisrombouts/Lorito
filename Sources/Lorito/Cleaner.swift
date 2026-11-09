@@ -1,5 +1,6 @@
 import FoundationModels
 import Foundation
+import NaturalLanguage
 
 /// On-device cleanup of raw transcripts via Apple's FoundationModels.
 @MainActor
@@ -96,12 +97,43 @@ final class Cleaner {
         return out
     }
 
-    /// The second pass over cleaned text. Returns the text to insert (the input when the pass fails or strays)
-    /// and what happened: applied, unchanged, rejected or failed.
+    /// The second pass over cleaned text, a few sentences at a time: given a long text whole, the model hands it back
+    /// untouched. Each window is checked on its own; one that fails keeps its first-pass text.
+    /// Returns the text to insert and what happened, as `outcome/windows`: applied, unchanged, rejected or failed.
     func polish(_ cleaned: String, audioSeconds: Double) async -> (text: String, outcome: String) {
-        guard let out = await Self.respond(polishSession, to: cleaned, audioSeconds: audioSeconds) else { return (cleaned, "failed") }
-        if out == cleaned { return (cleaned, "unchanged") }
-        return Self.onlyDeletes(out, from: cleaned) ? (out, "applied") : (cleaned, "rejected")
+        let windows = Self.windows(cleaned)
+        var text = "", outcomes: Set<String> = []
+        for (n, w) in windows.enumerated() {
+            let core = w.trimmingCharacters(in: .whitespacesAndNewlines)
+            let trailing = String(w.dropFirst(w.range(of: core)?.upperBound.utf16Offset(in: w) ?? w.count))
+            let s = n == 0 ? polishSession : LanguageModelSession(transcript: Self.polishTranscript)
+            let seconds = audioSeconds * Double(core.count) / Double(max(cleaned.count, 1))
+            let outcome: String
+            if let out = await Self.respond(s, to: core, audioSeconds: seconds) {
+                outcome = out == core ? "unchanged" : Self.onlyDeletes(out, from: core) ? "applied" : "rejected"
+                text += (outcome == "applied" ? out : core) + trailing
+            } else {
+                outcome = "failed"
+                text += w
+            }
+            outcomes.insert(outcome)
+        }
+        let outcome = ["applied", "rejected", "failed", "unchanged"].first(where: outcomes.contains) ?? "unchanged"
+        return (text.trimmingCharacters(in: .whitespacesAndNewlines), "\(outcome)/\(windows.count)")
+    }
+
+    /// The text cut into runs of three sentences, a lone last sentence joining the run before it. Each run keeps its trailing space.
+    nonisolated static func windows(_ text: String, size: Int = 3) -> [String] {
+        let tok = NLTokenizer(unit: .sentence)
+        tok.string = text
+        let sentences = tok.tokens(for: text.startIndex..<text.endIndex)
+        guard sentences.count > size else { return [text] }
+        var groups = stride(from: 0, to: sentences.count, by: size).map { Array(sentences[$0..<min($0 + size, sentences.count)]) }
+        if groups.count > 1, groups.last!.count == 1 { groups[groups.count - 2] += groups.removeLast() }
+        return groups.enumerated().map { n, g in
+            let end = n == groups.count - 1 ? text.endIndex : groups[n + 1].first!.lowerBound
+            return String(text[g.first!.lowerBound..<end])
+        }
     }
 
     /// The model's reply, or nil on timeout, error or empty output.
@@ -123,13 +155,77 @@ final class Cleaner {
         s.lowercased().split { !$0.isLetter && !$0.isNumber && $0 != "'" && $0 != "’" }.map(String.init)
     }
 
-    /// The polish pass keeps the user's words: its output must be the input's words in order with some left out,
-    /// punctuation and capitals aside, and keep at least 60% of them.
+    /// A word as the polish guard compares it: lowercased, curly apostrophes made straight, quotes and
+    /// sentence punctuation trimmed from its edges. Inner separators and symbols stay, so 3,5 is not 3.5 and €40 is not $40.
+    struct Token: Equatable {
+        let text: String
+        let endsSentence: Bool
+    }
+
+    nonisolated static func tokens(_ s: String) -> [Token] {
+        let edges = CharacterSet(charactersIn: ".,;:!?\"'“”‘’()[]…«»")
+        return s.split(whereSeparator: \.isWhitespace).compactMap { raw in
+            let t = raw.lowercased().replacingOccurrences(of: "’", with: "'").trimmingCharacters(in: edges)
+            return t.isEmpty ? nil : Token(text: t, endsSentence: raw.last.map { ".!?".contains($0) } ?? false)
+        }
+    }
+
+    /// Words the polish pass may delete on their own, as whole phrases. Not "so", "like", "dus" or "gewoon": alone they often carry meaning.
+    nonisolated static let fillers: [[String]] = [
+        ["um"], ["uh"], ["uhm"], ["eh"], ["ehm"], ["basically"], ["so", "yeah"], ["yeah"], ["you", "know"], ["i", "mean"],
+        ["or", "something"], ["dus", "ja"], ["zeg", "maar"], ["eigenlijk"], ["nou"],
+    ]
+    nonisolated static let negations: Set<String> = ["not", "no", "never", "nothing", "none", "nobody", "don't", "doesn't", "didn't",
+        "isn't", "aren't", "wasn't", "won't", "can't", "cannot", "shouldn't", "niet", "geen", "nooit", "niets", "niks", "nee", "niemand"]
+
+    /// The polish pass keeps the user's words: its output must be the input's words in order, and every run of words
+    /// it left out must be filler, a copy of words it kept (a repeat), or a whole sentence of at most four words with
+    /// no number or negation (an abandoned start). A lost "not", a lost fact or a changed number fails.
     nonisolated static func onlyDeletes(_ polished: String, from cleaned: String) -> Bool {
-        let p = words(polished), c = words(cleaned)
-        guard !p.isEmpty, Double(p.count) >= 0.6 * Double(c.count) else { return false }
-        var it = c.makeIterator()
-        return p.allSatisfy { w in while let x = it.next() { if x == w { return true } }; return false }
+        let p = tokens(polished), c = tokens(cleaned)
+        guard !p.isEmpty, p.count <= c.count else { return false }
+        // Matching earliest keeps the first copy of a repeat; matching latest keeps the last. Either may be the one deleted.
+        return [kept(p, in: c), kept(p.reversed(), in: c.reversed()).map { $0.map { c.count - 1 - $0 }.reversed() }]
+            .contains { $0.map { deletedRunsAllowed(keeping: $0, of: c, output: p.map(\.text)) } ?? false }
+    }
+
+    /// Indexes in `c` that the words of `p` match, in order, or nil when `p` is not a subsequence.
+    private nonisolated static func kept(_ p: some Collection<Token>, in c: some Collection<Token>) -> [Int]? {
+        var out: [Int] = [], i = 0
+        let c = Array(c)
+        for t in p {
+            while i < c.count, c[i].text != t.text { i += 1 }
+            guard i < c.count else { return nil }
+            out.append(i); i += 1
+        }
+        return out
+    }
+
+    private nonisolated static func deletedRunsAllowed(keeping kept: [Int], of c: [Token], output: [String]) -> Bool {
+        let keep = Set(kept)
+        var i = 0
+        while i < c.count {
+            guard !keep.contains(i) else { i += 1; continue }
+            var j = i
+            while j < c.count, !keep.contains(j) { j += 1 }
+            let run = c[i..<j].map(\.text)
+            let wholeSentence = (i == 0 || c[i - 1].endsSentence) && c[j - 1].endsSentence
+            let fragment = wholeSentence && run.count <= 4
+                && !run.contains { negations.contains($0) || $0.contains(where: \.isNumber) }
+            guard isFiller(run[...]) || contains(output, run) || fragment else { return false }
+            i = j
+        }
+        return true
+    }
+
+    private nonisolated static func isFiller(_ run: ArraySlice<String>) -> Bool {
+        if run.isEmpty { return true }
+        return fillers.contains { f in run.starts(with: f) && isFiller(run.dropFirst(f.count)) }
+    }
+
+    private nonisolated static func contains(_ hay: [String], _ needle: [String]) -> Bool {
+        guard needle.count <= hay.count else { return false }
+        return (0...(hay.count - needle.count)).contains { Array(hay[$0..<($0 + needle.count)]) == needle }
     }
 
     /// An edit only removes and repunctuates: it keeps roughly the length and adds almost no words of its own.

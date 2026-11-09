@@ -16,14 +16,27 @@ enum SelfTest {
         expect(!Cleaner.plausible("I want to go to the store tomorrow.", for: "Ik wil morgen naar de winkel gaan."), "guard: translation")
         expect(!Cleaner.plausible("Meeting moved.", for: "So the meeting that we had planned for Monday morning is now moved to Tuesday afternoon instead."), "guard: summary")
 
-        // Polish guard: deleting and repunctuating passes; a changed, added or moved word, or gutting the text, does not.
+        // Polish guard: a deleted run must be filler, a repeat of kept words, or a short abandoned sentence.
         let c = "I think we should move it. We should move it to Friday, basically."
-        expect(Cleaner.onlyDeletes("I think we should move it to Friday.", from: c), "polish: deletion")
+        expect(Cleaner.onlyDeletes("I think we should move it to Friday.", from: c), "polish: repeat and filler")
         expect(Cleaner.onlyDeletes(c.uppercased(), from: c), "polish: capitals only")
+        expect(Cleaner.onlyDeletes("Ik wil het abonnement niet opzeggen, alleen pauzeren.",
+                                   from: "Ik wil het abonnement niet opzeggen. Ik wil het abonnement niet opzeggen, alleen pauzeren, zeg maar."), "polish: repeat over half the text")
+        expect(Cleaner.onlyDeletes("The server runs out of memory.", from: "The problem is. The server runs out of memory."), "polish: abandoned start")
+        expect(Cleaner.onlyDeletes("He said fine and don't worry.", from: "He said 'fine' and don’t worry."), "polish: quotes and apostrophes")
         expect(!Cleaner.onlyDeletes("I think we should move it to Thursday.", from: c), "polish: changed word")
         expect(!Cleaner.onlyDeletes("I really think we should move it to Friday.", from: c), "polish: added word")
         expect(!Cleaner.onlyDeletes("We should move it to Friday, I think.", from: c), "polish: reordered")
-        expect(!Cleaner.onlyDeletes("Move it.", from: c), "polish: too much deleted")
+        expect(!Cleaner.onlyDeletes("Move it.", from: c), "polish: lost content")
+        expect(!Cleaner.onlyDeletes("I do want the refund.", from: "I do not want the refund."), "polish: lost negation")
+        expect(!Cleaner.onlyDeletes("It costs 3.5 euro.", from: "It costs 3,5 euro."), "polish: number format")
+        expect(!Cleaner.onlyDeletes("It costs $40.", from: "It costs €40."), "polish: currency")
+        expect(!Cleaner.onlyDeletes("One two three four five.", from: "One two three four five. Six seven eight nine ten."), "polish: lost sentence")
+        expect(!Cleaner.onlyDeletes("We moeten de login afmaken.", from: "We moeten dus de login afmaken."), "polish: dus is not filler")
+        expect(!Cleaner.onlyDeletes("The tickets are booked.", from: "Not today. The tickets are booked."), "polish: negation fragment")
+        let six = "We left early. The train was late. It rained all day. We ate in town. The museum was closed. We went home."
+        expect(Cleaner.windows("We left early. The train was late. It rained. We ate.").count == 1, "polish: four sentences, one window")
+        expect(Cleaner.windows(six).count == 2 && Cleaner.windows(six).joined() == six, "polish: windows cover the text")
 
         // Hotkeys: one key code and one flag bit each; 1.0's Left Option stays the default.
         expect(Set(Hotkey.allCases.map(\.keyCode)).count == Hotkey.allCases.count, "hotkey: key codes unique")
