@@ -2,8 +2,6 @@ import SwiftUI
 
 struct LoritoApp: App {
     private let controller = DictationController.shared
-    @AppStorage(Settings.cleanupEnabledKey) private var cleanupEnabled = true
-    @AppStorage(Settings.inputDeviceKey) private var inputDevice = ""
 
     init() {
         // Start after AppKit has finished launching.
@@ -14,44 +12,13 @@ struct LoritoApp: App {
 
     var body: some Scene {
         MenuBarExtra {
-            Text(status)
-            if let p = controller.problem {
-                Text(p)
-                Button("Open System Settings…") { openSettings(for: p) }
-            }
-            Divider()
-            Toggle("Clean Up with Apple Intelligence", isOn: $cleanupEnabled)
-                .disabled(controller.cleanupUnavailable != nil)
-            if let r = controller.cleanupUnavailable { Text(r) }
-            Toggle("Launch at Login", isOn: Binding(get: { Settings.launchAtLogin }, set: { Settings.launchAtLogin = $0 }))
-            Picker("Microphone", selection: $inputDevice) {
-                Text("Automatic (built-in)").tag("")
-                ForEach(AudioRecorder.inputDevices(), id: \.uniqueID) {
-                    Text($0.localizedName).tag($0.uniqueID)
-                }
-            }
-            Divider()
-            if !controller.transcripts.isEmpty {
-                Menu("Recent transcriptions") {
-                    ForEach(Array(controller.transcripts.enumerated()), id: \.offset) { _, t in
-                        Button(t.count > 50 ? t.prefix(50) + "…" : t) {
-                            NSPasteboard.general.clearContents()
-                            NSPasteboard.general.setString(t, forType: .string)
-                        }
-                    }
-                }
-                Divider()
-            }
-            Button("Quit Lorito") { exit(0) }
-                .keyboardShortcut("q")
+            MenuContent(controller: controller)
         } label: {
             menuIcon
         }
-        .onChange(of: controller.state) { _, _ in controller.refreshPermissions(prompt: false) }
-    }
-
-    private var status: String {
-        controller.state == .idle ? "Idle — hold or tap Left Option to dictate" : OverlayView.text(for: controller.state)
+        SwiftUI.Settings {
+            SettingsView()
+        }
     }
 
     @ViewBuilder private var menuIcon: some View {
@@ -105,16 +72,50 @@ struct LoritoApp: App {
         return image
     }
 
-    private func openSettings(for problem: String) {
-        let pane = problem.hasPrefix("Microphone")
-            ? "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
-            : "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
-        NSWorkspace.shared.open(URL(string: pane)!)
-    }
 }
 
 /// The app icon: Apple's Tahoe recipe in system orange, light tint down to the colour, white glyph, a darker shade for depth.
 /// `Lorito --icon out.png` renders it at 1024 px; build-app.sh turns that into the bundle's icns.
+/// Status, what needs fixing, recent dictations, Settings and Quit. Everything adjustable lives in Settings.
+struct MenuContent: View {
+    let controller: DictationController
+    @Environment(\.openSettings) private var openSettings
+    @AppStorage(Settings.hotkeyKey) private var hotkey = Hotkey.leftOption
+
+    var body: some View {
+        Text(status)
+        if let p = controller.problem {
+            Text(p)
+            Button("Set Up Lorito…") { controller.showOnboarding() }
+        }
+        Divider()
+        if !controller.transcripts.isEmpty {
+            Section("Recent — click to copy") {
+                ForEach(Array(controller.transcripts.enumerated()), id: \.offset) { _, t in
+                    Button(t.count > 60 ? t.prefix(60) + "…" : t) {
+                        NSPasteboard.general.clearContents()
+                        NSPasteboard.general.setString(t, forType: .string)
+                    }
+                }
+            }
+            Divider()
+        }
+        Button("Settings…") {
+            NSApp.activate()   // an LSUIElement app's windows open behind the frontmost app otherwise
+            openSettings()
+        }
+        .keyboardShortcut(",")
+        Divider()
+        Button("Quit Lorito") { NSApp.terminate(nil) }
+            .keyboardShortcut("q")
+            .onChange(of: controller.state) { _, _ in controller.refreshPermissions() }
+    }
+
+    private var status: String {
+        controller.state == .idle ? "Hold or tap \(hotkey.name) to dictate" : OverlayView.text(for: controller.state)
+    }
+}
+
 struct AppIconView: View {
     static func mix(_ c: NSColor, _ with: NSColor, _ f: CGFloat) -> Color { Color(nsColor: c.blended(withFraction: f, of: with)!) }
     var body: some View {

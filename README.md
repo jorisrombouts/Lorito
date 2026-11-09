@@ -6,9 +6,9 @@ Lorito repeats exactly what you say, in text. Fast, and all on your Mac.
 
 Lorito is a small dictation app that lives in the menu bar. Hold Left Option and talk, or tap it to talk hands-free. When you stop, the text shows up where your cursor is, in any app, in under a second.
 
-That is the whole app. No window, no account, no settings page. The menu has a microphone picker, a cleanup switch and your last five dictations. After the first launch it never goes online.
+That is the whole app. No account, no subscription. The menu shows your last five dictations; a small Settings window holds the hotkey, the microphone and the cleanup switch. After the first launch it never goes online.
 
-Speech recognition uses NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. It understands 25 European languages and picks the right one by itself. Cleanup uses Apple's on-device Foundation Models to fix punctuation, drop filler words and apply corrections like "no wait". The source is 788 lines of Swift with one dependency.
+Speech recognition uses NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. It understands 25 European languages and picks the right one by itself. Cleanup uses Apple's on-device Foundation Models to fix punctuation, drop filler words and apply corrections like "no wait". The source is 1,293 lines of Swift with one dependency, under the MIT license.
 
 ## Requirements
 
@@ -26,16 +26,16 @@ git clone https://github.com/jorisrombouts/Lorito.git && cd Lorito
 
 The certificate gives the app a fixed identity, so you grant permissions once and they survive updates. To update: `git pull && ./build-app.sh install`.
 
-The first launch downloads the recognition models (461 MB) and compiles them. That takes about 12 seconds; the parrot is in the menu bar but dictation is not ready yet. The app itself is 18 MB. macOS then asks for Microphone and Accessibility. Accessibility is what lets the app paste at your cursor.
+On first launch a welcome window walks you through three things: Microphone access, Accessibility access (what lets the app paste at your cursor), and the recognition models, which download once (461 MB) with a progress bar and take about 12 seconds to prepare. When all three are ticked, Lorito works. The app itself is 19 MB.
 
 ## Use
 
 - **Hold** Left Option, talk, let go.
 - **Tap** Left Option, talk, tap again. Esc or the ✕ in the pill throws it away. It stops on its own after two minutes without speech.
 
-Pressing any other key while holding cancels, so shortcuts like `€` or `@` still work. A pill at the bottom of the screen shows the sound level while you talk, then what it is doing, then "Inserted" or why the paste failed. Your clipboard is put back after the paste. Dutch and English are tested.
+Left Option is the default; Settings (⌘, from the menu) offers Right Option, Right Command, Right Control and Fn. Pressing any other key while holding cancels, so shortcuts like `€` or `@` still work. A pill at the bottom of the screen shows the sound level while you talk, then what it is doing, then "Inserted" or why the paste failed. Your clipboard is put back after the paste, images and files included, and clipboard managers are told to skip the dictation. In a password field Lorito does nothing. Dutch and English are tested; recognition covers 25 European languages, no Asian ones.
 
-In the microphone picker, "Automatic" is the built-in mic. Bluetooth headsets work when picked but miss the first half second. Dictations under four words are inserted as is. Cleanup never translates and never answers a question.
+In Settings, the "Automatic" microphone is the built-in mic. Bluetooth headsets work when picked but miss the first half second. Dictations under four words are inserted as is. Cleanup never translates and never answers a question; if its output strays from what you said, the raw transcript goes in instead.
 
 ## Speed
 
@@ -50,10 +50,29 @@ Measured on an M4 Pro, from letting go of the key to text at the cursor. Your ow
 
 Cleanup is nearly all of the wait. Turn it off in the menu and only recognition is left.
 
+## Privacy
+
+Speech recognition and cleanup run on your Mac. The only network connection is the one-time model download from Hugging Face. Nothing is sent anywhere, there is no telemetry, and what you say is never written to disk: the last five dictations live in memory until you quit. The log (Settings › About) holds timings and errors only.
+
 ## Troubleshooting
 
-If the paste does not land, the pill says why. It is the Accessibility permission, and your text is still in the menu. The fix for a stale permission and what the log holds are in `AGENTS.md`.
+- **The text does not appear.** The pill says why. Usually it is Accessibility: Settings › Permissions shows what is missing. Your text is still in the menu, click to copy.
+- **Accessibility is on in System Settings but Lorito still asks.** The entry is stale, often after a rebuild with another signature. Run `tccutil reset Accessibility nl.joris.lorito`, relaunch, and grant it again.
+- **"Speech model failed to load".** The download did not finish. Check your connection and click Retry in Settings › Permissions.
+- **Fn does nothing.** In System Settings › Keyboard, set "Press 🌐 key to" to "Do Nothing".
+
+## Uninstall
+
+```sh
+./build-app.sh uninstall
+```
+
+This removes the app, the model, the log, the settings and the permissions.
 
 ## Development
 
-A Swift Package, no Xcode project, one dependency. `./build-app.sh` builds and runs `build/Lorito.app`. `./check.sh` is the smoke test. `AGENTS.md` has the rules for changing the code.
+A Swift Package, no Xcode project, one dependency. `./build-app.sh` builds and runs `build/Lorito.app`. `./check.sh` is the smoke test. `AGENTS.md` has the rules for changing the code, `CONTRIBUTING.md` how to send a change.
+
+## License
+
+MIT, see `LICENSE`. The recognition model and FluidAudio have their own licenses, in `THIRD_PARTY_NOTICES.md`.

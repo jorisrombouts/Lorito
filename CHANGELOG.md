@@ -4,6 +4,18 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
+- A welcome window on first launch: Microphone, Accessibility and the model download with progress, each with the button that fixes it. A failed download can be retried without relaunching.
+- A Settings window (⌘, from the menu): hotkey, microphone, cleanup, sounds, Launch at Login, permissions, and About with the credits. The menu keeps status, recent dictations and Quit.
+- The hotkey can be Right Option, Right Command, Right Control or Fn instead of Left Option.
+- Optional start and stop sounds.
+- The clipboard comes back whole after a paste, images and files included, and clipboard managers skip the dictation.
+- Nothing is dictated or pasted while a password field has focus.
+- With microphone access denied the pill says so instead of inserting nothing.
+- Cleanup output that strays from what you said (an answer, a translation, a summary) is replaced by the raw transcript.
+- Unplugging the microphone mid-dictation keeps what was said so far.
+- The log rotates at 1 MB.
+- MIT license.
+
 ## 1.0.0 — 2026-10-18
 
 First release.

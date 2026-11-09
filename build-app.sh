@@ -1,8 +1,31 @@
 #!/bin/sh
 # Builds Lorito.app with SwiftPM (no Xcode project needed). Output: build/Lorito.app
 # `./build-app.sh install` also copies it to /Applications and launches that copy.
+# `./build-app.sh uninstall` removes the app, its model, log, settings and permissions.
 set -eu
 cd "$(dirname "$0")"
+
+if [ "${1:-}" = uninstall ]; then
+  pkill -x Lorito 2>/dev/null || true
+  rm -rf /Applications/Lorito.app build/Lorito.app
+  M="$HOME/Library/Application Support/FluidAudio"
+  rm -rf "$M/Models/parakeet-tdt-0.6b-v3"   # only Lorito's model; other FluidAudio apps keep theirs
+  rmdir "$M/Models" "$M" 2>/dev/null || true
+  rm -f "$HOME/Library/Logs/Lorito.log" "$HOME/Library/Logs/Lorito.old.log"
+  defaults delete nl.joris.lorito 2>/dev/null || true
+  tccutil reset Accessibility nl.joris.lorito >/dev/null 2>&1 || true
+  tccutil reset Microphone nl.joris.lorito >/dev/null 2>&1 || true
+  echo "Lorito removed. The signing certificate stays in your login keychain: delete \"Lorito Dev\" in Keychain Access if you want it gone."
+  exit 0
+fi
+
+# The app needs the macOS 26 SDK (Liquid Glass, Foundation Models); say so instead of failing deep in the build.
+SDK=$(xcrun --show-sdk-version 2>/dev/null || echo 0)
+if [ "${SDK%%.*}" -lt 26 ]; then
+  echo "Lorito needs the macOS 26 SDK; found ${SDK}. Update macOS and run: xcode-select --install" >&2
+  exit 1
+fi
+
 swift build -c release --quiet
 
 APP=build/Lorito.app
@@ -31,13 +54,14 @@ cat > "$APP/Contents/Info.plist" <<'PLIST'
   <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleShortVersionString</key><string>1.0</string>
-  <key>CFBundleVersion</key><string>1</string>
+  <key>CFBundleVersion</key><string>BUILD</string>
   <key>LSMinimumSystemVersion</key><string>26.0</string>
   <key>LSUIElement</key><true/>
   <key>NSHighResolutionCapable</key><true/>
   <key>NSMicrophoneUsageDescription</key><string>Lorito records your voice while you dictate and transcribes it on this Mac.</string>
 </dict></plist>
 PLIST
+sed -i '' "s/BUILD/$(git rev-list --count HEAD 2>/dev/null || echo 1)/" "$APP/Contents/Info.plist"   # build number: commits so far
 
 # Sign with "Lorito Dev" (see make-signing-cert.sh) so Accessibility grants survive rebuilds; ad-hoc otherwise.
 if [ -z "${CODESIGN_IDENTITY:-}" ]; then

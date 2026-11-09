@@ -66,6 +66,22 @@ final class Cleaner {
             return first
         }
         let out = result?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        return out.isEmpty ? nil : out
+        guard !out.isEmpty else { return nil }
+        guard Self.plausible(out, for: raw) else { NSLog("cleanup: rejected, output strays from the transcript"); return nil }
+        return out
+    }
+
+    /// An edit only removes and repunctuates: it keeps roughly the length and adds almost no words of its own.
+    /// An answer, a translation or a summary fails this, and the raw transcript is inserted instead.
+    nonisolated static func plausible(_ cleaned: String, for raw: String) -> Bool {
+        func words(_ s: String) -> [String] {
+            s.lowercased().split { !$0.isLetter && !$0.isNumber && $0 != "'" && $0 != "’" }.map(String.init)
+        }
+        let r = words(raw), c = words(cleaned)
+        guard !r.isEmpty, !c.isEmpty else { return false }
+        let ratio = Double(c.count) / Double(r.count)
+        let known = Set(r)
+        let added = c.filter { !known.contains($0) }.count
+        return ratio >= 0.5 && ratio <= 1.2 && Double(added) <= max(2, 0.15 * Double(c.count))
     }
 }

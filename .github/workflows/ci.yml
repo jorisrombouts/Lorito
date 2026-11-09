@@ -1,0 +1,16 @@
+name: CI
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  build:
+    # The model and Apple Intelligence are not available here; ./check.sh stays the local gate.
+    runs-on: macos-26
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build
+        run: swift build
+      - name: Self-test
+        run: .build/debug/Lorito --self-test

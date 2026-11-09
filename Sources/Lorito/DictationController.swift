@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import Carbon.HIToolbox
 import Observation
 import SwiftUI
 
@@ -24,7 +25,6 @@ final class DictationController {
     private var levelMax: Float = 0        // logged per dictation
     private(set) var transcripts: [String] = []
     private(set) var problem: String?          // shown in the menu
-    private var engineProblem: String?
     private(set) var cleanupUnavailable: String? = Cleaner.unavailableReason
 
     private let recorder = AudioRecorder()
@@ -49,48 +49,93 @@ final class DictationController {
             level = max(rel, level * 0.93); levelMax = max(levelMax, level)    // ~0.3 s release
             if rel > 0.3 { lastVoice = Date() } else if handsFree, Date().timeIntervalSince(lastVoice) > 120 { release() }
         } }
+        recorder.onInterrupted = { [self] _ in if state == .listening { release() } }   // keep what was said before the mic went away
         hotkey.onPress = { [self] in press() }
         hotkey.onRelease = { [self] in release() }
         hotkey.onCancel = { [self] in cancel() }
         hotkey.onTap = { [self] in tap() }
         hotkey.onEscape = { [self] in if handsFree { cancel() } }
         hotkey.start()
-        refreshPermissions(prompt: true)
+        refreshPermissions()
+        loadEngine()
+        if cleanupUnavailable == nil { cleaner.warmUp() }
+        if !UserDefaults.standard.bool(forKey: Settings.onboardedKey) || problem != nil { onboarding.show() }
+    }
 
+    enum ModelStatus: Equatable { case loading(Double, String), ready, failed(String) }
+    private(set) var model: ModelStatus = .loading(0, "Loading")
+    private(set) var micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+    private(set) var axTrusted = AXIsProcessTrusted()
+    var modelFailed: Bool { if case .failed = model { true } else { false } }
+    var ready: Bool { model == .ready && micStatus == .authorized && axTrusted }
+    @ObservationIgnored private lazy var onboarding = OnboardingWindow(controller: self)
+
+    /// Loads the engine, downloading the models the first time; called again by Retry after a failure.
+    func loadEngine() {
+        if case .loading(let f, _) = model, f > 0 { return }   // already on its way
+        model = .loading(0, "Loading")
+        refreshPermissions()
         Task.detached { [self] in
             let t0 = Date()
             do {
-                let e = try await ParakeetEngine()
-                await MainActor.run { engine = e }
+                let e = try await ParakeetEngine { f, what in Task { @MainActor in
+                    if case .loading = self.model { self.model = .loading(max(f, 0.01), what) }
+                } }
+                await MainActor.run { engine = e; model = .ready; refreshPermissions() }
                 NSLog("engine ready in %d ms", Int(Date().timeIntervalSince(t0) * 1000))
             } catch {
                 NSLog("engine failed: %@", error.localizedDescription)
-                await MainActor.run { engineProblem = error.localizedDescription; refreshPermissions(prompt: false) }
+                await MainActor.run { model = .failed(error.localizedDescription); refreshPermissions() }
             }
         }
-        if cleanupUnavailable == nil { cleaner.warmUp() }
     }
 
-    func refreshPermissions(prompt: Bool) {
-        let mic = AVCaptureDevice.authorizationStatus(for: .audio)
-        if mic == .notDetermined { AVCaptureDevice.requestAccess(for: .audio) { _ in } }
-        problem = !AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": prompt] as CFDictionary) ? "Accessibility permission missing (needed to paste)"
-            : mic == .denied ? "Microphone access denied" : engineProblem
+    func showOnboarding() { onboarding.show() }
+
+    func requestMicrophone() {
+        AVCaptureDevice.requestAccess(for: .audio) { _ in Task { @MainActor in self.refreshPermissions() } }
+    }
+
+    /// Shows the system prompt that adds Lorito to the Accessibility list, and opens that list.
+    func requestAccessibility() {
+        _ = AXIsProcessTrustedWithOptions(["AXTrustedCheckOptionPrompt": true] as CFDictionary)
+        NSWorkspace.shared.open(URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")!)
+    }
+
+    func refreshPermissions() {
+        micStatus = AVCaptureDevice.authorizationStatus(for: .audio)
+        axTrusted = AXIsProcessTrusted()
+        problem = !axTrusted ? "Accessibility permission missing (needed to paste)"
+            : micStatus == .denied || micStatus == .restricted ? "Microphone access denied"
+            : micStatus == .notDetermined ? "Microphone access not granted yet"
+            : modelFailed ? "Speech model failed to load" : nil
     }
 
     private func press() {
         if handsFree { release(); swallowNextTap = true; return }
         guard state == .idle || state == .done else { return }
-        guard engine != nil else { show(.fallback("Model still loading")); return }
+        guard engine != nil else { show(.fallback(modelFailed ? "Speech model failed to load" : "Model still loading")); return }
+        if let reason = Self.cannotRecord() { show(.fallback(reason)); return }
         do {
             (smooth, peakHold, levelMax) = (0, 0, 0)   // the first syllable sets the peak; one carried over or started above a soft voice leaves the bars flat until it decays
             try recorder.start()
             if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp() }
             state = .listening
+            if Settings.sounds { NSSound(named: "Tink")?.play() }
             overlay.show()
         } catch {
             show(.fallback(error.localizedDescription))
         }
+    }
+
+    /// Why a dictation must not start: no microphone access, or a password field (Secure Event Input) has focus.
+    static func cannotRecord() -> String? {
+        switch AVCaptureDevice.authorizationStatus(for: .audio) {
+        case .denied, .restricted: return "Microphone access denied"
+        case .notDetermined: AVCaptureDevice.requestAccess(for: .audio) { _ in }; return "Allow microphone access first"
+        default: break
+        }
+        return IsSecureEventInputEnabled() ? "Secure input is on, not dictating" : nil
     }
 
     private func tap() {
@@ -112,6 +157,7 @@ final class DictationController {
         let mode = handsFree ? "handsfree" : "hold"
         guard let samples = recorder.stop() else { finish(); return }
         state = .transcribing
+        if Settings.sounds { NSSound(named: "Pop")?.play() }
         handsFree = false   // the ✕ belongs to listening only
         Task {
             let t0 = Date()

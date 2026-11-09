@@ -9,17 +9,32 @@ final class AudioRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
     static let format = AVAudioFormat(commonFormat: .pcmFormatFloat32, sampleRate: 16_000, channels: 1, interleaved: false)!
 
     var onLevel: (@Sendable (Float) -> Void)?
+    /// The microphone went away or the session failed mid-recording (main queue). What was captured so far is kept.
+    var onInterrupted: (@MainActor (String) -> Void)?
 
     private let session = AVCaptureSession()
     private let output = AVCaptureAudioDataOutput()
     private let lock = NSLock()
     private var samples: [Float] = []
-    private var converter: AVAudioConverter?
+    private var converter: AVAudioConverter?          // audio queue only
+    private let sessionQueue = DispatchQueue(label: "lorito.session")   // startRunning blocks for ~70 ms; keep it off main
 
     override init() {
         super.init()
         output.setSampleBufferDelegate(self, queue: DispatchQueue(label: "lorito.audio"))
         session.addOutput(output)
+        let nc = NotificationCenter.default
+        nc.addObserver(forName: AVCaptureSession.runtimeErrorNotification, object: session, queue: .main) { [weak self] n in
+            let why = (n.userInfo?[AVCaptureSessionErrorKey] as? Error)?.localizedDescription ?? "unknown"
+            NSLog("mic: runtime error: %@", why)
+            MainActor.assumeIsolated { self?.onInterrupted?("Microphone stopped") }
+        }
+        nc.addObserver(forName: AVCaptureDevice.wasDisconnectedNotification, object: nil, queue: .main) { [weak self] n in
+            guard let self, let gone = n.object as? AVCaptureDevice,
+                  self.session.inputs.contains(where: { ($0 as? AVCaptureDeviceInput)?.device.uniqueID == gone.uniqueID }) else { return }
+            NSLog("mic: %@ disconnected", gone.localizedName)
+            MainActor.assumeIsolated { self.onInterrupted?("Microphone disconnected") }
+        }
     }
 
     static func inputDevices() -> [AVCaptureDevice] {
@@ -39,16 +54,19 @@ final class AudioRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
         lock.withLock { samples.removeAll(keepingCapacity: true) }
         let t0 = Date()
         guard let device = Self.device() else { throw NSError(domain: "AudioRecorder", code: 1, userInfo: [NSLocalizedDescriptionKey: "No microphone"]) }
-        session.inputs.forEach(session.removeInput)
-        session.addInput(try AVCaptureDeviceInput(device: device))
-        converter = nil
-        session.startRunning()
-        NSLog("mic: %@ started in %d ms", device.localizedName, Int(Date().timeIntervalSince(t0) * 1000))
+        nonisolated(unsafe) let input = try AVCaptureDeviceInput(device: device)   // handed to the session queue, used only there
+        let name = device.localizedName
+        sessionQueue.async { [self] in
+            session.inputs.forEach(session.removeInput)
+            session.addInput(input)
+            session.startRunning()
+            NSLog("mic: %@ started in %d ms", name, Int(Date().timeIntervalSince(t0) * 1000))
+        }
     }
 
     /// Returns the samples, or nil when the clip is too short to be worth transcribing.
     func stop() -> [Float]? {
-        session.stopRunning()
+        sessionQueue.sync { session.stopRunning() }   // after a start still in flight; the queue keeps the order
         let out = lock.withLock { samples }
         let seconds = Double(out.count) / Self.format.sampleRate
         NSLog("mic stopped: %.2f s", seconds)

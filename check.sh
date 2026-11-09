@@ -5,6 +5,7 @@ cd "$(dirname "$0")"
 T=$(mktemp -d)
 swift build --quiet
 BIN=.build/debug/Lorito
+"$BIN" --self-test || { echo "FAIL: self-test"; exit 1; }
 
 say -v Samantha -o "$T/en.aiff" "Hello, this is a test of speech recognition."
 say -v Xander -o "$T/nl.aiff" "Hallo, dit is een test van lokale spraakherkenning."

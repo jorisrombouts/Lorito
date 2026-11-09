@@ -5,6 +5,9 @@ import SwiftUI
 let args = CommandLine.arguments
 func arg(after flag: String) -> String? { args.firstIndex(of: flag).flatMap { $0 + 1 < args.count ? args[$0 + 1] : nil } }
 
+// Logic checks that need no model or permission: `Lorito --self-test`
+if args.contains("--self-test") { exit(MainActor.assumeIsolated { SelfTest.run() } ? 0 : 1) }
+
 // Cleanup check: `Lorito --clean "raw text"`
 if let raw = arg(after: "--clean") {
     if let r = Cleaner.unavailableReason { print(r); exit(1) }
@@ -68,7 +71,12 @@ if let path = arg(after: "--icon") {
 }
 
 // Normal launch: the menu bar app. stderr (NSLog) goes to ~/Library/Logs/Lorito.log.
-let logPath = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Logs/Lorito.log").path
-freopen(logPath, "a", stderr)
+// Over 1 MB the log moves to Lorito.old.log, replacing the previous one: two files at most.
+if let size = try? logURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 1_000_000 {
+    let old = logURL.deletingLastPathComponent().appendingPathComponent("Lorito.old.log")
+    try? FileManager.default.removeItem(at: old)
+    try? FileManager.default.moveItem(at: logURL, to: old)
+}
+freopen(logURL.path, "a", stderr)
 NSApplication.shared.setActivationPolicy(.accessory)
 LoritoApp.main()
