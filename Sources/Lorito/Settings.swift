@@ -6,6 +6,8 @@ enum Settings {
     static var cleanupEnabled: Bool {
         UserDefaults.standard.object(forKey: cleanupEnabledKey) as? Bool ?? true
     }
+    static let polishEnabledKey = "polishEnabled"
+    static var polishEnabled: Bool { cleanupEnabled && UserDefaults.standard.bool(forKey: polishEnabledKey) }
     static let inputDeviceKey = "inputDeviceUID"   // empty = automatic
     static let hotkeyKey = "hotkey"
     static var hotkey: Hotkey { Hotkey(rawValue: UserDefaults.standard.string(forKey: hotkeyKey) ?? "") ?? .leftOption }

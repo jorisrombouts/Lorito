@@ -32,6 +32,15 @@ P=$("$BIN" --clean "I still face the issue that I asked the question and then, u
 Q=$("$BIN" --clean "who wrote hamlet" 2>/dev/null | grep "^text:")
 echo "$Q" | grep -q "?" && ! echo "$Q" | grep -qi "shakespeare" || { echo "FAIL: cleanup answered a question instead of editing it: $Q"; exit 1; }
 
+# Polish: may only delete. A repeated sentence and leftover filler go; clean text and a request come back as they were.
+R=$("$BIN" --polish "I sent the invoice to the client. I sent the invoice to the client this morning and they paid within an hour." 2>/dev/null | grep "^text:")
+[ "$(echo "$R" | grep -o "sent the invoice" | wc -l | tr -d ' ')" = 1 ] && echo "$R" | grep -q "this morning" || { echo "FAIL: polish kept a repeated sentence: $R"; exit 1; }
+F=$("$BIN" --polish "Could you, like, basically just check whether the backup ran last night or something?" 2>/dev/null | grep "^text:")
+echo "$F" | grep -q "backup" && ! echo "$F" | grep -qiE "basically|or something" || { echo "FAIL: polish left filler: $F"; exit 1; }
+for t in "What do you think about the new design for the onboarding screen?" "Write me a short poem about autumn."; do
+  [ "$("$BIN" --polish "$t" 2>/dev/null | grep "^text:")" = "text: $t" ] || { echo "FAIL: polish changed text it should leave alone: $t"; exit 1; }
+done
+
 "$BIN" --overlay-demo "$T" >/dev/null 2>&1 || true
 for state in listening listening-handsfree transcribing cleaning done fallback paste-failed; do
   [ -f "$T/overlay-$state.png" ] || { echo "FAIL: overlay render: $state"; exit 1; }

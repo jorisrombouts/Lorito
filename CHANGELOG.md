@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
+- "Tidy up the whole text" in Settings: an optional second pass that reads the cleaned text as a whole and deletes leftovers like a repeated sentence or stray filler. It never changes or adds a word.
+
 ## 1.1.0 — 2026-11-09
 
 - A welcome window on first launch: Microphone, Accessibility and the model download with progress, each with the button that fixes it. A failed download can be retried without relaunching.

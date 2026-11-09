@@ -16,6 +16,15 @@ enum SelfTest {
         expect(!Cleaner.plausible("I want to go to the store tomorrow.", for: "Ik wil morgen naar de winkel gaan."), "guard: translation")
         expect(!Cleaner.plausible("Meeting moved.", for: "So the meeting that we had planned for Monday morning is now moved to Tuesday afternoon instead."), "guard: summary")
 
+        // Polish guard: deleting and repunctuating passes; a changed, added or moved word, or gutting the text, does not.
+        let c = "I think we should move it. We should move it to Friday, basically."
+        expect(Cleaner.onlyDeletes("I think we should move it to Friday.", from: c), "polish: deletion")
+        expect(Cleaner.onlyDeletes(c.uppercased(), from: c), "polish: capitals only")
+        expect(!Cleaner.onlyDeletes("I think we should move it to Thursday.", from: c), "polish: changed word")
+        expect(!Cleaner.onlyDeletes("I really think we should move it to Friday.", from: c), "polish: added word")
+        expect(!Cleaner.onlyDeletes("We should move it to Friday, I think.", from: c), "polish: reordered")
+        expect(!Cleaner.onlyDeletes("Move it.", from: c), "polish: too much deleted")
+
         // Hotkeys: one key code and one flag bit each; 1.0's Left Option stays the default.
         expect(Set(Hotkey.allCases.map(\.keyCode)).count == Hotkey.allCases.count, "hotkey: key codes unique")
         expect(Set(Hotkey.allCases.map(\.mask)).count == Hotkey.allCases.count, "hotkey: masks unique")

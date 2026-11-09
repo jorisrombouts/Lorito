@@ -18,6 +18,7 @@ struct GeneralPane: View {
     @AppStorage(Settings.hotkeyKey) private var hotkey = Hotkey.leftOption
     @AppStorage(Settings.inputDeviceKey) private var inputDevice = ""
     @AppStorage(Settings.cleanupEnabledKey) private var cleanupEnabled = true
+    @AppStorage(Settings.polishEnabledKey) private var polishEnabled = false
     @AppStorage(Settings.soundsKey) private var sounds = false
     @AppStorage("launchAtLoginShown") private var launchAtLogin = false   // mirrors SMAppService; @State needs a macro plugin the Command Line Tools lack
 
@@ -49,6 +50,14 @@ struct GeneralPane: View {
             } footer: {
                 Text(controller.cleanupUnavailable
                      ?? "Fixes punctuation, drops filler words and applies corrections like “no wait”. Never translates or answers. Off inserts exactly what was heard.")
+                    .settingsFooter()
+            }
+
+            Section {
+                Toggle("Tidy up the whole text", isOn: $polishEnabled)
+                    .disabled(!cleanupEnabled || controller.cleanupUnavailable != nil)
+            } footer: {
+                Text("Reads the cleaned text once more as a whole and removes leftovers: repeated phrases, false starts, stray fillers. Never changes or adds a word. Takes a moment longer.")
                     .settingsFooter()
             }
 
