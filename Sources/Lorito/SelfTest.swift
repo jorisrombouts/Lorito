@@ -33,8 +33,20 @@ enum SelfTest {
         expect(!Cleaner.onlyDeletes("It costs $40.", from: "It costs €40."), "polish: currency")
         expect(!Cleaner.onlyDeletes("One two three four five.", from: "One two three four five. Six seven eight nine ten."), "polish: lost sentence")
         expect(!Cleaner.onlyDeletes("We moeten de login afmaken.", from: "We moeten dus de login afmaken."), "polish: dus is not filler")
+        expect(!Cleaner.onlyDeletes("The test passed.", from: "The test failed. The test passed."), "polish: short sentence is not a fragment")
+        expect(!Cleaner.onlyDeletes("We accept the offer.", from: "Yes. We accept the offer."), "polish: yes is kept")
+        expect(!Cleaner.onlyDeletes("The client knows.", from: "The client knows. The client knows already."), "polish: kept the shorter copy")
+        expect(!Cleaner.onlyDeletes("I do think it's not ready.", from: "I do not think it's not ready."), "polish: repeat must be adjacent")
+        expect(!Cleaner.onlyDeletes("Order pizzas and 2 drinks.", from: "Order 2 pizzas and 2 drinks."), "polish: number elsewhere")
+        expect(!Cleaner.onlyDeletes("It.", from: "I mean it."), "polish: filler needs a pause")
+        expect(!Cleaner.onlyDeletes("Did that work?", from: "Did you know that work?"), "polish: you know in a question")
+        expect(!Cleaner.onlyDeletes("We shipped it.", from: "It wouldn't work. We shipped it."), "polish: wouldn't is a negation")
+        expect(Cleaner.onlyDeletes("We meet at five.", from: "We meet at five, uh, at five."), "polish: hesitation then repeat")
+        expect(Cleaner.onlyDeletes("I reviewed it, we can sign.", from: "I reviewed it, so yeah, we can sign."), "polish: filler set off by commas")
         expect(!Cleaner.onlyDeletes("The tickets are booked.", from: "Not today. The tickets are booked."), "polish: negation fragment")
         let six = "We left early. The train was late. It rained all day. We ate in town. The museum was closed. We went home."
+        let emoji = "Thanks 🙏, really. See you 👋 Monday. Bring the slides 📊. Ping me if late. Or text me. Either is fine."
+        expect(Cleaner.windows(emoji).joined() == emoji, "polish: windows keep emoji text")
         expect(Cleaner.windows("We left early. The train was late. It rained. We ate.").count == 1, "polish: four sentences, one window")
         expect(Cleaner.windows(six).count == 2 && Cleaner.windows(six).joined() == six, "polish: windows cover the text")
 

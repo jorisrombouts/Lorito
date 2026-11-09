@@ -99,27 +99,28 @@ final class Cleaner {
 
     /// The second pass over cleaned text, a few sentences at a time: given a long text whole, the model hands it back
     /// untouched. Each window is checked on its own; one that fails keeps its first-pass text.
-    /// Returns the text to insert and what happened, as `outcome/windows`: applied, unchanged, rejected or failed.
+    /// Returns the text to insert and how many windows were applied, unchanged, rejected or failed, as `applied:1,unchanged:2`.
     func polish(_ cleaned: String, audioSeconds: Double) async -> (text: String, outcome: String) {
         let windows = Self.windows(cleaned)
-        var text = "", outcomes: Set<String> = []
+        var text = "", counts: [String: Int] = [:]
         for (n, w) in windows.enumerated() {
             let core = w.trimmingCharacters(in: .whitespacesAndNewlines)
-            let trailing = String(w.dropFirst(w.range(of: core)?.upperBound.utf16Offset(in: w) ?? w.count))
+            guard let r = w.range(of: core), !core.isEmpty else { text += w; continue }
+            let (leading, trailing) = (w[..<r.lowerBound], w[r.upperBound...])   // blank lines and spaces around the window stay as they were
             let s = n == 0 ? polishSession : LanguageModelSession(transcript: Self.polishTranscript)
             let seconds = audioSeconds * Double(core.count) / Double(max(cleaned.count, 1))
             let outcome: String
             if let out = await Self.respond(s, to: core, audioSeconds: seconds) {
                 outcome = out == core ? "unchanged" : Self.onlyDeletes(out, from: core) ? "applied" : "rejected"
-                text += (outcome == "applied" ? out : core) + trailing
+                text += leading + (outcome == "applied" ? out : core) + trailing
             } else {
                 outcome = "failed"
                 text += w
             }
-            outcomes.insert(outcome)
+            counts[outcome, default: 0] += 1
         }
-        let outcome = ["applied", "rejected", "failed", "unchanged"].first(where: outcomes.contains) ?? "unchanged"
-        return (text.trimmingCharacters(in: .whitespacesAndNewlines), "\(outcome)/\(windows.count)")
+        let outcome = ["applied", "unchanged", "rejected", "failed"].compactMap { k in counts[k].map { "\(k):\($0)" } }.joined(separator: ",")
+        return (text.trimmingCharacters(in: .whitespacesAndNewlines), outcome)
     }
 
     /// The text cut into runs of three sentences, a lone last sentence joining the run before it. Each run keeps its trailing space.
@@ -160,33 +161,50 @@ final class Cleaner {
     struct Token: Equatable {
         let text: String
         let endsSentence: Bool
+        let pauseAfter: Bool   // a comma or any sentence mark right after it
     }
 
     nonisolated static func tokens(_ s: String) -> [Token] {
         let edges = CharacterSet(charactersIn: ".,;:!?\"'“”‘’()[]…«»")
         return s.split(whereSeparator: \.isWhitespace).compactMap { raw in
             let t = raw.lowercased().replacingOccurrences(of: "’", with: "'").trimmingCharacters(in: edges)
-            return t.isEmpty ? nil : Token(text: t, endsSentence: raw.last.map { ".!?".contains($0) } ?? false)
+            let tail = raw.reversed().prefix { "\"'”’)]»".contains($0) }   // closing quotes and brackets after the mark
+            let end = raw.dropLast(tail.count).last
+            return t.isEmpty ? nil : Token(text: t, endsSentence: end.map { ".!?".contains($0) } ?? false,
+                                           pauseAfter: end.map { ".,;:!?…".contains($0) } ?? false)
         }
     }
 
-    /// Words the polish pass may delete on their own, as whole phrases. Not "so", "like", "dus" or "gewoon": alone they often carry meaning.
+    /// Hesitation sounds: deletable anywhere.
+    nonisolated static let hesitations: Set<String> = ["um", "uh", "uhm", "eh", "ehm", "uhh", "hmm"]
+    /// Filler phrases: deletable only when a comma or sentence mark sets them off, so "I mean it" and "did you know that" stay.
+    /// Not "so", "like", "dus" or "gewoon": alone they often carry meaning.
     nonisolated static let fillers: [[String]] = [
-        ["um"], ["uh"], ["uhm"], ["eh"], ["ehm"], ["basically"], ["so", "yeah"], ["yeah"], ["you", "know"], ["i", "mean"],
-        ["or", "something"], ["dus", "ja"], ["zeg", "maar"], ["eigenlijk"], ["nou"],
+        ["basically"], ["so", "yeah"], ["yeah"], ["you", "know"], ["i", "mean"], ["or", "something"],
+        ["dus", "ja"], ["zeg", "maar"], ["eigenlijk"], ["nou"],
     ]
-    nonisolated static let negations: Set<String> = ["not", "no", "never", "nothing", "none", "nobody", "don't", "doesn't", "didn't",
-        "isn't", "aren't", "wasn't", "won't", "can't", "cannot", "shouldn't", "niet", "geen", "nooit", "niets", "niks", "nee", "niemand"]
+    nonisolated static let negations: Set<String> = ["not", "no", "never", "nothing", "none", "nobody", "nowhere", "neither", "nor",
+        "without", "don't", "doesn't", "didn't", "isn't", "aren't", "wasn't", "weren't", "won't", "wouldn't", "can't", "cannot",
+        "couldn't", "shouldn't", "hasn't", "haven't", "hadn't", "mustn't", "needn't", "ain't",
+        "niet", "geen", "nooit", "niets", "niks", "nee", "niemand", "nergens", "zonder", "noch"]
+    /// Words an abandoned start ends on: "The problem is." "So the plan was." "Het probleem is dat."
+    nonisolated static let danglingEnds: Set<String> = ["is", "was", "are", "were", "be", "that", "the", "a", "an", "to", "of", "and",
+        "but", "if", "because", "so", "with", "for", "dat", "de", "het", "een", "van", "en", "maar", "om", "te", "met",
+        "voor", "omdat", "als", "zijn", "waren", "wordt"]
 
     /// The polish pass keeps the user's words: its output must be the input's words in order, and every run of words
-    /// it left out must be filler, a copy of words it kept (a repeat), or a whole sentence of at most four words with
-    /// no number or negation (an abandoned start). A lost "not", a lost fact or a changed number fails.
+    /// it left out must be one of:
+    /// - hesitations, or filler phrases set off by commas;
+    /// - a repeat: the same words right before or right after it, after any leading hesitation;
+    /// - an abandoned start: a whole sentence of at most four words ending on a word like "is" or "that",
+    ///   with no number or negation.
+    /// A lost "not", a lost fact or a changed number fails.
     nonisolated static func onlyDeletes(_ polished: String, from cleaned: String) -> Bool {
         let p = tokens(polished), c = tokens(cleaned)
         guard !p.isEmpty, p.count <= c.count else { return false }
         // Matching earliest keeps the first copy of a repeat; matching latest keeps the last. Either may be the one deleted.
         return [kept(p, in: c), kept(p.reversed(), in: c.reversed()).map { $0.map { c.count - 1 - $0 }.reversed() }]
-            .contains { $0.map { deletedRunsAllowed(keeping: $0, of: c, output: p.map(\.text)) } ?? false }
+            .contains { $0.map { deletedRunsAllowed(keeping: $0, of: c) } ?? false }
     }
 
     /// Indexes in `c` that the words of `p` match, in order, or nil when `p` is not a subsequence.
@@ -201,31 +219,39 @@ final class Cleaner {
         return out
     }
 
-    private nonisolated static func deletedRunsAllowed(keeping kept: [Int], of c: [Token], output: [String]) -> Bool {
+    private nonisolated static func deletedRunsAllowed(keeping kept: [Int], of c: [Token]) -> Bool {
         let keep = Set(kept)
         var i = 0
         while i < c.count {
             guard !keep.contains(i) else { i += 1; continue }
             var j = i
             while j < c.count, !keep.contains(j) { j += 1 }
-            let run = c[i..<j].map(\.text)
-            let wholeSentence = (i == 0 || c[i - 1].endsSentence) && c[j - 1].endsSentence
-            let fragment = wholeSentence && run.count <= 4
-                && !run.contains { negations.contains($0) || $0.contains(where: \.isNumber) }
-            guard isFiller(run[...]) || contains(output, run) || fragment else { return false }
+            guard allowedRun(i..<j, of: c) else { return false }
             i = j
         }
         return true
     }
 
-    private nonisolated static func isFiller(_ run: ArraySlice<String>) -> Bool {
-        if run.isEmpty { return true }
-        return fillers.contains { f in run.starts(with: f) && isFiller(run.dropFirst(f.count)) }
+    private nonisolated static func allowedRun(_ r: Range<Int>, of c: [Token]) -> Bool {
+        let run = c[r].map(\.text)
+        if run.allSatisfy(hesitations.contains) { return true }
+        // Filler phrases, with a pause right before the run or at its end.
+        let setOff = c[r.upperBound - 1].pauseAfter || (r.lowerBound > 0 && c[r.lowerBound - 1].pauseAfter)
+        if setOff, isFiller(run[...]) { return true }
+        // A repeat of the words right before or right after the run.
+        let body = Array(run.drop(while: hesitations.contains))
+        let n = body.count
+        if r.lowerBound >= n, c[(r.lowerBound - n)..<r.lowerBound].map(\.text) == body { return true }
+        if r.upperBound + n <= c.count, c[r.upperBound..<(r.upperBound + n)].map(\.text) == body { return true }
+        // An abandoned start.
+        let wholeSentence = (r.lowerBound == 0 || c[r.lowerBound - 1].endsSentence) && c[r.upperBound - 1].endsSentence
+        return wholeSentence && run.count <= 4 && danglingEnds.contains(run.last!)
+            && !run.contains { negations.contains($0) || $0.contains(where: \.isNumber) }
     }
 
-    private nonisolated static func contains(_ hay: [String], _ needle: [String]) -> Bool {
-        guard needle.count <= hay.count else { return false }
-        return (0...(hay.count - needle.count)).contains { Array(hay[$0..<($0 + needle.count)]) == needle }
+    private nonisolated static func isFiller(_ run: ArraySlice<String>) -> Bool {
+        if run.isEmpty { return true }
+        return (fillers + hesitations.map { [$0] }).contains { f in run.starts(with: f) && isFiller(run.dropFirst(f.count)) }
     }
 
     /// An edit only removes and repunctuates: it keeps roughly the length and adds almost no words of its own.

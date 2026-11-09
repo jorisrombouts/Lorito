@@ -8,7 +8,7 @@ Lorito is a small dictation app that lives in the menu bar. Hold Left Option and
 
 That is the whole app. No account, no subscription. The menu shows your last five dictations; a small Settings window holds the hotkey, the microphone and the cleanup switch. After the first launch it never goes online.
 
-Speech recognition uses NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. It understands 25 European languages and picks the right one by itself. Cleanup uses Apple's on-device Foundation Models to fix punctuation, drop filler words and apply corrections like "no wait". The source is 1,551 lines of Swift with one dependency, under the MIT license.
+Speech recognition uses NVIDIA's [parakeet-tdt-0.6b-v3](https://huggingface.co/nvidia/parakeet-tdt-0.6b-v3) (CC-BY-4.0) through [FluidAudio](https://github.com/FluidInference/FluidAudio) (Apache-2.0) on the Neural Engine. It understands 25 European languages and picks the right one by itself. Cleanup uses Apple's on-device Foundation Models to fix punctuation, drop filler words and apply corrections like "no wait". The source is 1,589 lines of Swift with one dependency, under the MIT license.
 
 ## Requirements
 
