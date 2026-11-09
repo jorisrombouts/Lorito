@@ -24,9 +24,9 @@ git clone https://github.com/jorisrombouts/Lorito.git && cd Lorito
 ./build-app.sh install
 ```
 
-The certificate gives the app a fixed identity, so you grant permissions once and they survive updates. To update: `git pull && ./build-app.sh install`.
+The certificate gives the app a fixed identity, so you grant permissions once and they survive updates. The first build fetches FluidAudio and compiles it, which takes a few minutes with little output; later builds take about 20 seconds. To update: `git pull && ./build-app.sh install`.
 
-On first launch a welcome window walks you through three things: Microphone access, Accessibility access (what lets the app paste at your cursor), and the recognition models, which download once (461 MB) with a progress bar and take about 12 seconds to prepare. When all three are ticked, Lorito works. The app itself is 19 MB.
+On first launch a welcome window walks you through three things: Microphone access, Accessibility access (what lets the app paste at your cursor), and the recognition models, which download once (461 MB) with a progress bar. Downloading and preparing them takes about half a minute on a fast connection. When all three are ticked, Lorito works. The app itself is 19 MB.
 
 ## Use
 
