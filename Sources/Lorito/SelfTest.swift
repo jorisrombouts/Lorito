@@ -30,6 +30,17 @@ enum SelfTest {
         expect(Set(Hotkey.allCases.map(\.mask)).count == Hotkey.allCases.count, "hotkey: masks unique")
         expect(Hotkey(rawValue: "nonsense") == nil && Hotkey.leftOption.keyCode == 58, "hotkey: default")
 
+        // Gestures, by event time: a natural tap of 0.35 s starts hands-free (it was a too-short hold under 1.1's 0.3 s limit).
+        func gesture(_ steps: [(Character, TimeInterval)]) -> [HotkeyGesture.Result?] {
+            var g = HotkeyGesture()
+            return steps.map { k, t in k == "d" ? g.down(at: t) : k == "u" ? g.up(at: t) : g.otherKey() }
+        }
+        expect(gesture([("d", 10), ("u", 10.35)]) == [.press, .tap], "gesture: tap")
+        expect(gesture([("d", 10), ("u", 11.2)]) == [.press, .release], "gesture: hold")
+        expect(gesture([("d", 10), ("d", 10.1), ("u", 10.2)]) == [.press, nil, .tap], "gesture: repeated down")
+        expect(gesture([("d", 10), ("k", 10.1), ("k", 10.2), ("u", 10.3)]) == [.press, .cancel, nil, nil], "gesture: Option-combo")
+        expect(gesture([("u", 10), ("k", 10.1), ("d", 11), ("u", 11.1)]) == [nil, nil, .press, .tap], "gesture: stray up")
+
         // Clipboard: every item and type comes back; an empty clipboard stays empty.
         let pb = NSPasteboard(name: NSPasteboard.Name("lorito.selftest.\(UUID())"))
         defer { pb.releaseGlobally() }

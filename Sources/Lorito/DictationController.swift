@@ -18,6 +18,7 @@ final class DictationController {
     private(set) var level: Float = 0      // 0...1 for the meter, see onLevel below
     private(set) var handsFree = false     // tapped instead of held: keeps listening until the next tap, Esc or ✕
     private var swallowNextTap = false     // the release after the tap that finished a hands-free dictation
+    private var generation = 0             // bumped per pill; a delayed finish() of an older one must not end a newer dictation
     private var lastVoice = Date()
     private var smooth: Float = 0
     private var noiseFloor: Float = 0.01
@@ -112,6 +113,7 @@ final class DictationController {
     }
 
     private func press() {
+        swallowNextTap = false   // left over when the key-up that ended hands-free was cancelled by another key
         if handsFree { release(); swallowNextTap = true; return }
         guard state == .idle || state == .done else { return }
         guard engine != nil else { show(.fallback(modelFailed ? "Speech model failed to load" : "Model still loading")); return }
@@ -119,6 +121,7 @@ final class DictationController {
         do {
             (smooth, peakHold, levelMax) = (0, 0, 0)   // the first syllable sets the peak; one carried over or started above a soft voice leaves the bars flat until it decays
             try recorder.start()
+            generation += 1
             if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp(polish: Settings.polishEnabled) }
             state = .listening
             if Settings.sounds { NSSound(named: "Tink")?.play() }
@@ -155,6 +158,7 @@ final class DictationController {
         if swallowNextTap { swallowNextTap = false; return }
         guard state == .listening, let engine else { return }
         let mode = handsFree ? "handsfree" : "hold"
+        let g = generation
         guard let samples = recorder.stop() else { finish(); return }
         state = .transcribing
         if Settings.sounds { NSSound(named: "Pop")?.play() }
@@ -193,14 +197,16 @@ final class DictationController {
                 else { (.done, 700) }
             state = next
             try? await Task.sleep(for: .milliseconds(hold))
-            finish()
+            if generation == g { finish() }   // a dictation started on the "done" pill is not ours to end
         }
     }
 
     private func show(_ s: State) {
         state = s
+        generation += 1
+        let g = generation
         overlay.show()
-        Task { try? await Task.sleep(for: .seconds(1.2)); finish() }
+        Task { try? await Task.sleep(for: .seconds(1.2)); if generation == g { finish() } }
     }
 
     private func finish() {
