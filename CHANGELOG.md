@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
+## 1.1.0 — 2026-11-09
+
 - A welcome window on first launch: Microphone, Accessibility and the model download with progress, each with the button that fixes it. A failed download can be retried without relaunching.
 - A Settings window (⌘, from the menu): hotkey, microphone, cleanup, sounds, Launch at Login, permissions, and About with the credits. The menu keeps status, recent dictations and Quit.
 - The hotkey can be Right Option, Right Command, Right Control or Fn instead of Left Option.
