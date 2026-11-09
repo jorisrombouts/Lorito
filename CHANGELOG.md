@@ -4,7 +4,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
-- "Tidy up the whole text" in Settings: an optional second pass that reads the cleaned text as a whole and deletes leftovers like a repeated sentence or stray filler. It never changes or adds a word.
+- "Tidy up the whole text" in Settings: an optional second pass that reads the cleaned text again and deletes leftovers like a repeated sentence or stray filler. It never changes or adds a word.
+- One tap of the hotkey starts hands-free listening again; a slightly slow tap was taken for a too-short hold and dropped. A dictation started on the "done" pill is no longer cut off.
 
 ## 1.1.0 — 2026-11-09
 
