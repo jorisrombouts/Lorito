@@ -97,5 +97,6 @@ if let size = try? logURL.resourceValues(forKeys: [.fileSizeKey]).fileSize, size
     try? FileManager.default.moveItem(at: logURL, to: old)
 }
 freopen(logURL.path, "a", stderr)
+Settings.migrateCleanup()
 NSApplication.shared.setActivationPolicy(.accessory)
 LoritoApp.main()

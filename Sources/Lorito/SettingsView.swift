@@ -17,8 +17,7 @@ struct GeneralPane: View {
     private let controller = DictationController.shared
     @AppStorage(Settings.hotkeyKey) private var hotkey = Hotkey.leftOption
     @AppStorage(Settings.inputDeviceKey) private var inputDevice = ""
-    @AppStorage(Settings.cleanupEnabledKey) private var cleanupEnabled = true
-    @AppStorage(Settings.polishEnabledKey) private var polishEnabled = false
+    @AppStorage(Settings.cleanupKey) private var cleanup = CleanupLevel.standard
     @AppStorage(Settings.soundsKey) private var sounds = false
     @AppStorage("launchAtLoginShown") private var launchAtLogin = false   // mirrors SMAppService; @State needs a macro plugin the Command Line Tools lack
 
@@ -30,8 +29,8 @@ struct GeneralPane: View {
                 }
             } footer: {
                 Text(hotkey == .fn
-                     ? "Hold to talk, or tap to talk hands-free. In Keyboard settings, set “Press 🌐 key to” to “Do Nothing”."
-                     : "Hold to talk, or tap to talk hands-free. Pressing another key while holding cancels.")
+                     ? "Hold to talk, tap for hands-free. Set “Press 🌐 key to” to “Do Nothing” in Keyboard settings."
+                     : "Hold to talk, tap for hands-free.")
                     .settingsFooter()
             }
 
@@ -41,24 +40,18 @@ struct GeneralPane: View {
                     ForEach(AudioRecorder.inputDevices(), id: \.uniqueID) { Text($0.localizedName).tag($0.uniqueID) }
                 }
             } footer: {
-                Text("Bluetooth headsets work, but miss the first half second.").settingsFooter()
+                if let d = AudioRecorder.inputDevices().first(where: { $0.uniqueID == inputDevice }), AudioRecorder.isBluetooth(d) {
+                    Text("Bluetooth mics miss the first half second.").settingsFooter()
+                }
             }
 
             Section {
-                Toggle("Clean up with Apple Intelligence", isOn: $cleanupEnabled)
-                    .disabled(controller.cleanupUnavailable != nil)
+                Picker("Cleanup", selection: controller.cleanupUnavailable == nil ? $cleanup : .constant(.off)) {
+                    ForEach(CleanupLevel.allCases) { Text($0.name).tag($0) }
+                }
+                .disabled(controller.cleanupUnavailable != nil)
             } footer: {
-                Text(controller.cleanupUnavailable
-                     ?? "Fixes punctuation, drops filler words and applies corrections like “no wait”. Never translates or answers. Off inserts exactly what was heard.")
-                    .settingsFooter()
-            }
-
-            Section {
-                Toggle("Tidy up the whole text", isOn: cleanupEnabled ? $polishEnabled : .constant(false))
-                    .disabled(!cleanupEnabled || controller.cleanupUnavailable != nil)
-            } footer: {
-                Text("Reads the cleaned text once more as a whole and removes leftovers: repeated phrases, false starts, stray fillers. Never changes or adds a word. Takes a moment longer.")
-                    .settingsFooter()
+                Text(controller.cleanupUnavailable ?? cleanup.detail).settingsFooter()
             }
 
             Section {

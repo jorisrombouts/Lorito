@@ -101,6 +101,10 @@ final class AudioRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegat
         return Array(UnsafeBufferPointer(start: out.floatChannelData![0], count: Int(out.frameLength)))
     }
 
+    static func isBluetooth(_ device: AVCaptureDevice) -> Bool {
+        [kAudioDeviceTransportTypeBluetooth, kAudioDeviceTransportTypeBluetoothLE].contains(transport(of: device))
+    }
+
     /// CoreAudio transport type (built-in, Bluetooth, USB, virtual, aggregate) of an AVCaptureDevice.
     private static func transport(of device: AVCaptureDevice) -> UInt32 {
         var addr = AudioObjectPropertyAddress(mSelector: kAudioHardwarePropertyTranslateUIDToDevice, mScope: kAudioObjectPropertyScopeGlobal, mElement: kAudioObjectPropertyElementMain)

@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
+- Settings: the two cleanup switches are one Cleanup picker, Off, Standard or Thorough, and every footer is one short line. Your 1.2 choice carries over.
+
 ## 1.2.0 — 2026-11-09
 
 - "Tidy up the whole text" in Settings: an optional second pass that reads the cleaned text again and deletes leftovers like a repeated sentence or stray filler. It never changes or adds a word.

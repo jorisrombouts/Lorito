@@ -50,6 +50,20 @@ enum SelfTest {
         expect(Cleaner.windows("We left early. The train was late. It rained. We ate.").count == 1, "polish: four sentences, one window")
         expect(Cleaner.windows(six).count == 2 && Cleaner.windows(six).joined() == six, "polish: windows cover the text")
 
+        // Cleanup level: 1.2's two switches carry over; a fresh install gets Standard.
+        let suite = "lorito.selftest.\(UUID())"
+        let d = UserDefaults(suiteName: suite)!
+        defer { d.removePersistentDomain(forName: suite) }
+        Settings.migrateCleanup(d)
+        expect(d.string(forKey: Settings.cleanupKey) == nil, "cleanup: fresh install untouched")
+        for (on, polish, level) in [(true, true, CleanupLevel.thorough), (true, false, .standard), (false, true, .off), (false, false, .off)] {
+            d.removeObject(forKey: Settings.cleanupKey)
+            d.set(on, forKey: "cleanupEnabled"); d.set(polish, forKey: "polishEnabled")
+            Settings.migrateCleanup(d)
+            expect(d.string(forKey: Settings.cleanupKey) == level.rawValue && d.object(forKey: "polishEnabled") == nil,
+                   "cleanup: \(on)/\(polish) becomes \(level)")
+        }
+
         // Hotkeys: one key code and one flag bit each; 1.0's Left Option stays the default.
         expect(Set(Hotkey.allCases.map(\.keyCode)).count == Hotkey.allCases.count, "hotkey: key codes unique")
         expect(Set(Hotkey.allCases.map(\.mask)).count == Hotkey.allCases.count, "hotkey: masks unique")

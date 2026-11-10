@@ -2,12 +2,19 @@ import AppKit
 import ServiceManagement
 
 enum Settings {
-    static let cleanupEnabledKey = "cleanupEnabled"
-    static var cleanupEnabled: Bool {
-        UserDefaults.standard.object(forKey: cleanupEnabledKey) as? Bool ?? true
+    static let cleanupKey = "cleanup"
+    static var cleanup: CleanupLevel { CleanupLevel(rawValue: UserDefaults.standard.string(forKey: cleanupKey) ?? "") ?? .standard }
+    static var cleanupEnabled: Bool { cleanup != .off }
+    static var polishEnabled: Bool { cleanup == .thorough }
+
+    /// 1.2 had two switches, "cleanupEnabled" (default on) and "polishEnabled"; they become one level.
+    static func migrateCleanup(_ d: UserDefaults = .standard) {
+        guard d.string(forKey: cleanupKey) == nil, d.object(forKey: "cleanupEnabled") != nil || d.object(forKey: "polishEnabled") != nil else { return }
+        let level = CleanupLevel(cleanup: d.object(forKey: "cleanupEnabled") as? Bool ?? true, polish: d.bool(forKey: "polishEnabled"))
+        d.set(level.rawValue, forKey: cleanupKey)
+        d.removeObject(forKey: "cleanupEnabled"); d.removeObject(forKey: "polishEnabled")
+        NSLog("settings: cleanup switches moved to cleanup=%@", level.rawValue)
     }
-    static let polishEnabledKey = "polishEnabled"
-    static var polishEnabled: Bool { cleanupEnabled && UserDefaults.standard.bool(forKey: polishEnabledKey) }
     static let inputDeviceKey = "inputDeviceUID"   // empty = automatic
     static let hotkeyKey = "hotkey"
     static var hotkey: Hotkey { Hotkey(rawValue: UserDefaults.standard.string(forKey: hotkeyKey) ?? "") ?? .leftOption }
@@ -17,6 +24,30 @@ enum Settings {
     static var launchAtLogin: Bool {
         get { SMAppService.mainApp.status == .enabled }
         set { try? newValue ? SMAppService.mainApp.register() : SMAppService.mainApp.unregister() }
+    }
+}
+
+/// How much Apple Intelligence edits: not at all, the first pass, or the first pass plus the delete-only tidy-up.
+enum CleanupLevel: String, CaseIterable, Identifiable {
+    case off, standard, thorough
+    var id: String { rawValue }
+
+    init(cleanup: Bool, polish: Bool) { self = !cleanup ? .off : polish ? .thorough : .standard }
+
+    var name: String {
+        switch self {
+        case .off: "Off"
+        case .standard: "Standard"
+        case .thorough: "Thorough"
+        }
+    }
+
+    var detail: String {
+        switch self {
+        case .off: "Inserts exactly what was heard."
+        case .standard: "Fixes punctuation and drops filler words."
+        case .thorough: "Also removes repeated sentences and false starts. A moment slower."
+        }
     }
 }
 
