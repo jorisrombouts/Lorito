@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
+- The start and stop sounds are now macOS's own dictation sounds.
+
 ## 1.2.1 — 2026-11-10
 
 - Settings: the two cleanup switches are one Cleanup picker, Off, Standard or Thorough, and every footer is one short line. Your 1.2 choice carries over.

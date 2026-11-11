@@ -124,7 +124,7 @@ final class DictationController {
             generation += 1
             if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp(polish: Settings.polishEnabled) }
             state = .listening
-            if Settings.sounds { NSSound(named: "Tink")?.play() }
+            if Settings.sounds { Chime.play(Chime.start) }
             overlay.show()
         } catch {
             show(.fallback(error.localizedDescription))
@@ -161,7 +161,7 @@ final class DictationController {
         let g = generation
         guard let samples = recorder.stop() else { finish(); return }
         state = .transcribing
-        if Settings.sounds { NSSound(named: "Pop")?.play() }
+        if Settings.sounds { Chime.play(Chime.stop) }
         handsFree = false   // the ✕ belongs to listening only
         Task {
             let t0 = Date()
@@ -237,4 +237,21 @@ final class DictationController {
     }
 
     private func ms(since d: Date) -> Int { Int(Date().timeIntervalSince(d) * 1000) }
+}
+
+/// Start and stop sounds: macOS's own dictation sounds, which live in a private framework and may move in a later macOS, so Tink and Pop stand in when they are missing.
+@MainActor
+enum Chime {
+    private static let folder = "/System/Library/PrivateFrameworks/AssistantServices.framework/Versions/A/Resources/"
+    static let start = sound("dt-begin.caf", or: "Tink")
+    static let stop = sound("dt-confirm.caf", or: "Pop")
+
+    static func sound(_ file: String, or fallback: String) -> NSSound? {
+        NSSound(contentsOfFile: folder + file, byReference: true) ?? NSSound(named: fallback)
+    }
+
+    static func play(_ sound: NSSound?) {
+        sound?.stop()   // a quick second dictation restarts the sound instead of skipping it
+        sound?.play()
+    }
 }

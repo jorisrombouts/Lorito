@@ -98,6 +98,9 @@ enum SelfTest {
         TextInserter.restore(saved, to: pb)
         expect(pb.string(forType: .string) == nil, "clipboard: empty stays empty")
 
+        expect(Chime.start != nil && Chime.stop != nil, "sounds: start and stop load")
+        expect(Chime.sound("missing.caf", or: "Tink") != nil, "sounds: a missing file falls back")
+
         failures.forEach { print("FAIL:", $0) }
         print(failures.isEmpty ? "self-test passed" : "self-test: \(failures.count) failed")
         return failures.isEmpty
