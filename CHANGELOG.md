@@ -5,6 +5,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 ## Unreleased
 
 - The start and stop sounds are now macOS's own dictation sounds.
+- Thorough cleanup is gone; Settings has one Clean up text switch. It rarely changed anything and made every dictation slower. If you had Thorough on, cleanup stays on.
+- Cleanup is now off by default: Lorito inserts exactly what was heard unless you switch Clean up text on. If you picked Standard yourself, it stays on.
 
 ## 1.2.1 — 2026-11-10
 

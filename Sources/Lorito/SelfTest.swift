@@ -16,53 +16,22 @@ enum SelfTest {
         expect(!Cleaner.plausible("I want to go to the store tomorrow.", for: "Ik wil morgen naar de winkel gaan."), "guard: translation")
         expect(!Cleaner.plausible("Meeting moved.", for: "So the meeting that we had planned for Monday morning is now moved to Tuesday afternoon instead."), "guard: summary")
 
-        // Polish guard: a deleted run must be filler, a repeat of kept words, or a short abandoned sentence.
-        let c = "I think we should move it. We should move it to Friday, basically."
-        expect(Cleaner.onlyDeletes("I think we should move it to Friday.", from: c), "polish: repeat and filler")
-        expect(Cleaner.onlyDeletes(c.uppercased(), from: c), "polish: capitals only")
-        expect(Cleaner.onlyDeletes("Ik wil het abonnement niet opzeggen, alleen pauzeren.",
-                                   from: "Ik wil het abonnement niet opzeggen. Ik wil het abonnement niet opzeggen, alleen pauzeren, zeg maar."), "polish: repeat over half the text")
-        expect(Cleaner.onlyDeletes("The server runs out of memory.", from: "The problem is. The server runs out of memory."), "polish: abandoned start")
-        expect(Cleaner.onlyDeletes("He said fine and don't worry.", from: "He said 'fine' and don’t worry."), "polish: quotes and apostrophes")
-        expect(!Cleaner.onlyDeletes("I think we should move it to Thursday.", from: c), "polish: changed word")
-        expect(!Cleaner.onlyDeletes("I really think we should move it to Friday.", from: c), "polish: added word")
-        expect(!Cleaner.onlyDeletes("We should move it to Friday, I think.", from: c), "polish: reordered")
-        expect(!Cleaner.onlyDeletes("Move it.", from: c), "polish: lost content")
-        expect(!Cleaner.onlyDeletes("I do want the refund.", from: "I do not want the refund."), "polish: lost negation")
-        expect(!Cleaner.onlyDeletes("It costs 3.5 euro.", from: "It costs 3,5 euro."), "polish: number format")
-        expect(!Cleaner.onlyDeletes("It costs $40.", from: "It costs €40."), "polish: currency")
-        expect(!Cleaner.onlyDeletes("One two three four five.", from: "One two three four five. Six seven eight nine ten."), "polish: lost sentence")
-        expect(!Cleaner.onlyDeletes("We moeten de login afmaken.", from: "We moeten dus de login afmaken."), "polish: dus is not filler")
-        expect(!Cleaner.onlyDeletes("The test passed.", from: "The test failed. The test passed."), "polish: short sentence is not a fragment")
-        expect(!Cleaner.onlyDeletes("We accept the offer.", from: "Yes. We accept the offer."), "polish: yes is kept")
-        expect(!Cleaner.onlyDeletes("The client knows.", from: "The client knows. The client knows already."), "polish: kept the shorter copy")
-        expect(!Cleaner.onlyDeletes("I do think it's not ready.", from: "I do not think it's not ready."), "polish: repeat must be adjacent")
-        expect(!Cleaner.onlyDeletes("Order pizzas and 2 drinks.", from: "Order 2 pizzas and 2 drinks."), "polish: number elsewhere")
-        expect(!Cleaner.onlyDeletes("It.", from: "I mean it."), "polish: filler needs a pause")
-        expect(!Cleaner.onlyDeletes("Did that work?", from: "Did you know that work?"), "polish: you know in a question")
-        expect(!Cleaner.onlyDeletes("We shipped it.", from: "It wouldn't work. We shipped it."), "polish: wouldn't is a negation")
-        expect(Cleaner.onlyDeletes("We meet at five.", from: "We meet at five, uh, at five."), "polish: hesitation then repeat")
-        expect(Cleaner.onlyDeletes("I reviewed it, we can sign.", from: "I reviewed it, so yeah, we can sign."), "polish: filler set off by commas")
-        expect(!Cleaner.onlyDeletes("The tickets are booked.", from: "Not today. The tickets are booked."), "polish: negation fragment")
-        let six = "We left early. The train was late. It rained all day. We ate in town. The museum was closed. We went home."
-        let emoji = "Thanks 🙏, really. See you 👋 Monday. Bring the slides 📊. Ping me if late. Or text me. Either is fine."
-        expect(Cleaner.windows(emoji).joined() == emoji, "polish: windows keep emoji text")
-        expect(Cleaner.windows("We left early. The train was late. It rained. We ate.").count == 1, "polish: four sentences, one window")
-        expect(Cleaner.windows(six).count == 2 && Cleaner.windows(six).joined() == six, "polish: windows cover the text")
-
-        // Cleanup level: 1.2's two switches carry over; a fresh install gets Standard.
+        // Cleanup: 1.2's two switches and 1.2.1's Thorough carry over as on or off; a fresh install is untouched.
         let suite = "lorito.selftest.\(UUID())"
         let d = UserDefaults(suiteName: suite)!
         defer { d.removePersistentDomain(forName: suite) }
         Settings.migrateCleanup(d)
         expect(d.string(forKey: Settings.cleanupKey) == nil, "cleanup: fresh install untouched")
-        for (on, polish, level) in [(true, true, CleanupLevel.thorough), (true, false, .standard), (false, true, .off), (false, false, .off)] {
+        for (on, polish, level) in [(true, true, CleanupLevel.standard), (true, false, .standard), (false, true, .off), (false, false, .off)] {
             d.removeObject(forKey: Settings.cleanupKey)
             d.set(on, forKey: "cleanupEnabled"); d.set(polish, forKey: "polishEnabled")
             Settings.migrateCleanup(d)
             expect(d.string(forKey: Settings.cleanupKey) == level.rawValue && d.object(forKey: "polishEnabled") == nil,
                    "cleanup: \(on)/\(polish) becomes \(level)")
         }
+        d.set("thorough", forKey: Settings.cleanupKey)
+        Settings.migrateCleanup(d)
+        expect(d.string(forKey: Settings.cleanupKey) == "standard", "cleanup: thorough becomes standard")
 
         // Hotkeys: one key code and one flag bit each; 1.0's Left Option stays the default.
         expect(Set(Hotkey.allCases.map(\.keyCode)).count == Hotkey.allCases.count, "hotkey: key codes unique")

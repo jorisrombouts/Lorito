@@ -17,7 +17,7 @@ struct GeneralPane: View {
     private let controller = DictationController.shared
     @AppStorage(Settings.hotkeyKey) private var hotkey = Hotkey.leftOption
     @AppStorage(Settings.inputDeviceKey) private var inputDevice = ""
-    @AppStorage(Settings.cleanupKey) private var cleanup = CleanupLevel.standard
+    @AppStorage(Settings.cleanupKey) private var cleanup = CleanupLevel.off
     @AppStorage(Settings.soundsKey) private var sounds = false
     @AppStorage("launchAtLoginShown") private var launchAtLogin = false   // mirrors SMAppService; @State needs a macro plugin the Command Line Tools lack
 
@@ -46,10 +46,9 @@ struct GeneralPane: View {
             }
 
             Section {
-                Picker("Cleanup", selection: controller.cleanupUnavailable == nil ? $cleanup : .constant(.off)) {
-                    ForEach(CleanupLevel.allCases) { Text($0.name).tag($0) }
-                }
-                .disabled(controller.cleanupUnavailable != nil)
+                Toggle("Clean up text", isOn: controller.cleanupUnavailable == nil
+                       ? Binding(get: { cleanup != .off }, set: { cleanup = $0 ? .standard : .off }) : .constant(false))
+                    .disabled(controller.cleanupUnavailable != nil)
             } footer: {
                 Text(controller.cleanupUnavailable ?? cleanup.detail).settingsFooter()
             }

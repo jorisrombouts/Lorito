@@ -24,25 +24,6 @@ if let raw = arg(after: "--clean") {
     RunLoop.main.run()
 }
 
-// Polish check: `Lorito --polish "raw text"` runs both passes and prints each.
-if let raw = arg(after: "--polish") {
-    if let r = Cleaner.unavailableReason { print(r); exit(1) }
-    let cleaner = Cleaner()
-    Task { @MainActor in
-        cleaner.warmUp(polish: true)
-        try? await Task.sleep(for: .seconds(2))
-        let seconds = Double(raw.count) / 15
-        guard let cleaned = await cleaner.clean(raw, audioSeconds: seconds) else { print("text: (fallback)"); exit(0) }   // the app skips polish then too
-        print("clean:", cleaned)
-        let t0 = Date()
-        let (text, outcome) = await cleaner.polish(cleaned, audioSeconds: seconds)
-        print("polish_ms", Int(Date().timeIntervalSince(t0) * 1000), "polish", outcome)
-        print("text:", text)
-        exit(0)
-    }
-    RunLoop.main.run()
-}
-
 // Engine check: `Lorito --transcribe file.wav`
 if let path = arg(after: "--transcribe") {
     let samples = try loadSamples16k(URL(fileURLWithPath: path))

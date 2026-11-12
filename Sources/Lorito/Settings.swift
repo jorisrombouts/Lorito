@@ -3,14 +3,15 @@ import ServiceManagement
 
 enum Settings {
     static let cleanupKey = "cleanup"
-    static var cleanup: CleanupLevel { CleanupLevel(rawValue: UserDefaults.standard.string(forKey: cleanupKey) ?? "") ?? .standard }
+    static var cleanup: CleanupLevel { CleanupLevel(rawValue: UserDefaults.standard.string(forKey: cleanupKey) ?? "") ?? .off }   // off unless chosen
     static var cleanupEnabled: Bool { cleanup != .off }
-    static var polishEnabled: Bool { cleanup == .thorough }
 
-    /// 1.2 had two switches, "cleanupEnabled" (default on) and "polishEnabled"; they become one level.
+    /// 1.2 had two switches, "cleanupEnabled" (default on) and "polishEnabled"; 1.2.1 made them one level with
+    /// a third, "thorough", since removed. Both become on or off.
     static func migrateCleanup(_ d: UserDefaults = .standard) {
+        if d.string(forKey: cleanupKey) == "thorough" { d.set(CleanupLevel.standard.rawValue, forKey: cleanupKey) }
         guard d.string(forKey: cleanupKey) == nil, d.object(forKey: "cleanupEnabled") != nil || d.object(forKey: "polishEnabled") != nil else { return }
-        let level = CleanupLevel(cleanup: d.object(forKey: "cleanupEnabled") as? Bool ?? true, polish: d.bool(forKey: "polishEnabled"))
+        let level: CleanupLevel = d.object(forKey: "cleanupEnabled") as? Bool ?? true ? .standard : .off
         d.set(level.rawValue, forKey: cleanupKey)
         d.removeObject(forKey: "cleanupEnabled"); d.removeObject(forKey: "polishEnabled")
         NSLog("settings: cleanup switches moved to cleanup=%@", level.rawValue)
@@ -27,26 +28,14 @@ enum Settings {
     }
 }
 
-/// How much Apple Intelligence edits: not at all, the first pass, or the first pass plus the delete-only tidy-up.
-enum CleanupLevel: String, CaseIterable, Identifiable {
-    case off, standard, thorough
-    var id: String { rawValue }
-
-    init(cleanup: Bool, polish: Bool) { self = !cleanup ? .off : polish ? .thorough : .standard }
-
-    var name: String {
-        switch self {
-        case .off: "Off"
-        case .standard: "Standard"
-        case .thorough: "Thorough"
-        }
-    }
+/// Whether Apple Intelligence edits the transcript. Stored as a string, as 1.2.1's three-level picker was.
+enum CleanupLevel: String {
+    case off, standard
 
     var detail: String {
         switch self {
         case .off: "Inserts exactly what was heard."
         case .standard: "Fixes punctuation and drops filler words."
-        case .thorough: "Also removes repeated sentences and false starts. A moment slower."
         }
     }
 }

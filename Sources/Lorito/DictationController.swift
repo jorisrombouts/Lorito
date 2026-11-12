@@ -122,7 +122,7 @@ final class DictationController {
             (smooth, peakHold, levelMax) = (0, 0, 0)   // the first syllable sets the peak; one carried over or started above a soft voice leaves the bars flat until it decays
             try recorder.start()
             generation += 1
-            if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp(polish: Settings.polishEnabled) }
+            if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp() }
             state = .listening
             if Settings.sounds { Chime.play(Chime.start) }
             overlay.show()
@@ -170,26 +170,20 @@ final class DictationController {
             let sttMs = ms(since: t0)
             guard !text.isEmpty else { finish(); return }
 
-            var cleanMs = 0, polishMs = 0
+            var cleanMs = 0
             var fellBack = false
-            var polish = "off"
             if Settings.cleanupEnabled, cleanupUnavailable == nil, text.split(separator: " ").count >= 4 {
                 state = .cleaning
                 let t1 = Date()
                 if let cleaned = await cleaner.clean(text, audioSeconds: audioSeconds) { text = cleaned } else { fellBack = true }
                 cleanMs = ms(since: t1)
-                if !fellBack, Settings.polishEnabled {
-                    let t3 = Date()
-                    (text, polish) = await cleaner.polish(text, audioSeconds: audioSeconds)
-                    polishMs = ms(since: t3)
-                }
             }
 
             let t2 = Date()
             let notInserted = TextInserter.insert(text)
             transcripts = Array(([text] + transcripts).prefix(5))
-            NSLog("dictation mode=%@ audio_s=%.1f stt_ms=%d clean_ms=%d polish=%@ polish_ms=%d insert_ms=%d fallback=%d meter floor=%.4f peak=%.4f level_max=%.2f",
-                  mode, audioSeconds, sttMs, cleanMs, polish, polishMs, ms(since: t2), fellBack ? 1 : 0, noiseFloor, peakHold, levelMax)
+            NSLog("dictation mode=%@ audio_s=%.1f stt_ms=%d clean_ms=%d insert_ms=%d fallback=%d meter floor=%.4f peak=%.4f level_max=%.2f",
+                  mode, audioSeconds, sttMs, cleanMs, ms(since: t2), fellBack ? 1 : 0, noiseFloor, peakHold, levelMax)
             // A failed paste is the one the user must act on, so it outranks a cleanup fallback and holds longer.
             let (next, hold): (State, Int) =
                 if let notInserted { (.fallback(notInserted), 2500) }
