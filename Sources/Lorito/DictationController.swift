@@ -110,6 +110,13 @@ final class DictationController {
             : micStatus == .denied || micStatus == .restricted ? "Microphone access denied"
             : micStatus == .notDetermined ? "Microphone access not granted yet"
             : modelFailed ? "Speech model failed to load" : nil
+        refreshCleanup()
+    }
+
+    /// Apple Intelligence can still be loading at login, so this is asked again rather than once at launch.
+    func refreshCleanup() {
+        let r = Cleaner.unavailableReason
+        if r != cleanupUnavailable { cleanupUnavailable = r }
     }
 
     private func press() {
@@ -122,6 +129,7 @@ final class DictationController {
             (smooth, peakHold, levelMax) = (0, 0, 0)   // the first syllable sets the peak; one carried over or started above a soft voice leaves the bars flat until it decays
             try recorder.start()
             generation += 1
+            refreshCleanup()   // ~0.2 ms, after the mic is already starting
             if Settings.cleanupEnabled, cleanupUnavailable == nil { cleaner.warmUp() }
             state = .listening
             if Settings.sounds { Chime.play(Chime.start) }

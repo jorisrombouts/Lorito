@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
+- Clean up text no longer stays unavailable when Apple Intelligence was still loading as Lorito launched; it turns on once the model is ready, without a relaunch.
+
 ## 1.3.0 — 2026-11-12
 
 - The start and stop sounds are now macOS's own dictation sounds.
