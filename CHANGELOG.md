@@ -4,6 +4,8 @@ Notable changes, newest first. Versions follow the GitHub releases.
 
 ## Unreleased
 
+- Cleanup no longer answers a short question dictated without punctuation, such as "who wrote hamlet"; it adds the question mark instead.
+
 ## 1.3.0 — 2026-11-12
 
 - The start and stop sounds are now macOS's own dictation sounds.
