@@ -5,6 +5,7 @@ Notable changes, newest first. Versions follow the GitHub releases.
 ## Unreleased
 
 - Clean up text no longer stays unavailable when Apple Intelligence was still loading as Lorito launched; it turns on once the model is ready, without a relaunch.
+- Cleanup no longer answers a short question dictated without punctuation, such as "who wrote hamlet"; it adds the question mark instead.
 
 ## 1.3.0 — 2026-11-12
 
